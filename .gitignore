@@ -1,0 +1,8 @@
+.netrc
+_netrc
+.dodsrc
+.urs_cookies
+.venv/
+__pycache__/
+data/raw/
+data/work/

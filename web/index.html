@@ -1,0 +1,1319 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NABD — L'été de feu</title>
+<link rel="icon" href="logo-mark.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Reem+Kufi:wght@600&display=swap" rel="stylesheet">
+<link rel="preload" href="vendor/fonts/archivo-latin-standard-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="vendor/leaflet.css">
+<style>
+/* Archivo, variable in weight and width: expanded for titles (aerospace stencil feel), normal for reading */
+@font-face { font-family: "Archivo"; font-style: normal; font-display: swap; font-weight: 100 900; font-stretch: 62% 125%;
+  src: url(vendor/fonts/archivo-latin-standard-normal.woff2) format("woff2");
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+@font-face { font-family: "Archivo"; font-style: normal; font-display: swap; font-weight: 100 900; font-stretch: 62% 125%;
+  src: url(vendor/fonts/archivo-latin-ext-standard-normal.woff2) format("woff2");
+  unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+:root {
+  /* Layout: one "night after the fire" world. Site cards -> map + control rail -> evidence (pulse, areas, data). */
+  /* palette taken from the NABD logo: night violet, a pulse going from cyan to violet; orange stays for fire data */
+  --ink: #08061b;
+  --panel: rgba(14, 12, 32, .88);
+  --panel-2: rgba(52, 40, 112, .45);
+  --line: rgba(160, 150, 255, .18);
+  --text: #eef0fb;
+  --muted: #a8aacd;
+  --cyan: #3fe0ef;
+  --blue: #6f9dff;
+  --violet: #b07cf6;
+  --pulse: linear-gradient(90deg, var(--cyan), var(--blue) 55%, var(--violet));
+  --nebula: #b07cf6;
+  --glow: #3fe0ef;
+  --ember: #f97316;        /* accent: fire */
+  --ash: #cbd5e1;
+  --forest: #a3e635;       /* data: living forest */
+  --water: #38bdf8;
+  --display: "Archivo", "Segoe UI", system-ui, sans-serif;
+  --body: "Archivo", "Segoe UI", system-ui, sans-serif;
+  --mono: "Archivo", "Segoe UI", system-ui, sans-serif;
+  --arabic: "Reem Kufi", "Noto Kufi Arabic", "Segoe UI", sans-serif;
+  --r: 14px;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { background: #05060c; }
+body { margin: 0; background: transparent; color: var(--text); font: 15px/1.55 var(--body); }
+
+/* the launch film and the orbit behind the page */
+#space { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; z-index: 0; }
+body > header, body > main, body > footer { position: relative; z-index: 1; transition: opacity 1.1s ease .1s; }
+body.launching { overflow: hidden; }
+body.launching > header, body.launching > main, body.launching > footer { opacity: 0; pointer-events: none; }
+.launch { --bar: max(54px, calc((100vh - 100vw / 2.39) / 2)); position: fixed; z-index: 2; inset: auto 0 0 0; height: var(--bar); display: flex; justify-content: space-between; align-items: center; gap: 24px; padding: 0 clamp(18px, 4vw, 48px); pointer-events: none; transition: opacity .5s ease; }
+.title-card { position: fixed; z-index: 2; inset: 0; display: grid; place-content: center; text-align: center; pointer-events: none; color: #f6f2ea; opacity: 0; }
+body.titling .title-card { animation: title 3.4s cubic-bezier(.2,.7,.2,1) forwards; }
+.title-card .logo-big { display: grid; justify-items: center; }
+.title-card .mark { width: clamp(220px, 30vw, 380px); height: auto; overflow: visible; filter: drop-shadow(0 0 18px rgba(111,157,255,.45)); }
+.title-card .mark .line, .title-card .mark .glow { stroke-dasharray: 260; stroke-dashoffset: 260; }
+body.titling .title-card .mark .line, body.titling .title-card .mark .glow { animation: draw 1.3s .2s cubic-bezier(.6,0,.2,1) forwards; }
+.title-card .mark .planet, .title-card .mark .spark { opacity: 0; transform-origin: 88px 9.5px; }
+body.titling .title-card .mark .planet { animation: pop .7s 1.15s cubic-bezier(.2,1.6,.4,1) forwards; }
+body.titling .title-card .mark .spark { animation: pop .6s 1.4s ease forwards; }
+.title-card b { display: block; margin-top: 10px; font: 800 clamp(46px, 7.5vw, 104px)/1 var(--display); font-stretch: 125%; letter-spacing: .14em; margin-right: -.14em; text-shadow: 0 6px 40px rgba(0,0,0,.55); }
+.title-card i { display: block; width: min(60%, 340px); height: 1px; margin: 16px auto 12px; background: linear-gradient(90deg, transparent, rgba(238,240,251,.6), transparent); }
+.title-card em { display: block; font: 600 clamp(34px, 5vw, 62px)/1 var(--arabic); font-style: normal; }
+body.titling .title-card b { animation: track 3.1s cubic-bezier(.2,.7,.2,1) forwards; }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+@keyframes pop { from { opacity: 0; transform: scale(.3); } to { opacity: 1; transform: scale(1); } }
+.title-card span { display: block; margin-top: 14px; font: 400 clamp(14px, 1.5vw, 19px)/1.4 var(--body); font-stretch: 110%; letter-spacing: .06em; color: #e9e3d8; text-shadow: 0 2px 18px rgba(0,0,0,.7); }
+@keyframes title { 0% { opacity: 0; } 18% { opacity: 1; } 62% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes track { from { letter-spacing: .08em; margin-right: -.08em; } to { letter-spacing: .2em; margin-right: -.2em; } }
+.launch .sound { margin-left: auto; }
+/* launch webcast overlay, in the top letterbox bar */
+.hud { --bar: max(54px, calc((100vh - 100vw / 2.39) / 2)); position: fixed; z-index: 2; inset: 0 0 auto 0; height: var(--bar); display: flex; align-items: center; gap: clamp(12px, 2.4vw, 34px);
+  padding: 0 clamp(18px, 4vw, 48px); pointer-events: none; color: #efe9df; font: 500 clamp(12px, 1.05vw, 14px)/1 var(--body); font-stretch: 112%; letter-spacing: .04em; transition: opacity .5s ease; }
+.hud-id { color: rgba(239,233,223,.72); }
+.hud-clock { font: 650 clamp(15px, 1.5vw, 21px)/1 var(--body); font-stretch: 118%; font-variant-numeric: tabular-nums; letter-spacing: .02em; color: #fff; }
+.hud-phase { padding: 6px 10px; border-radius: 6px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.14); }
+.hud-phase:empty { display: none; }
+.hud-note { margin-left: auto; color: rgba(239,233,223,.55); }
+body:not(.launching) .hud { opacity: 0; visibility: hidden; transition: opacity .5s ease, visibility 0s .5s; }
+@media (max-width: 720px) { .hud-id, .hud-note { display: none; } }
+.launch .ctrls { display: flex; gap: 10px; pointer-events: auto; }
+body:not(.launching) .launch { opacity: 0; visibility: hidden; transition: opacity .5s ease, visibility 0s .5s; }
+.launch p { margin: 0; max-width: 60ch; font: 400 clamp(14px, 1.35vw, 18px)/1.4 var(--body); font-stretch: 108%; letter-spacing: .01em; color: #efe9df; transition: opacity .3s; }
+.launch button { pointer-events: auto; flex: none; background: none; color: #f6f2ea; border: 1px solid rgba(246,242,234,.4); border-radius: 999px; padding: 7px 14px; font: 500 13px var(--body); font-stretch: 110%; cursor: pointer; }
+.launch button[aria-pressed="true"] { border-color: var(--cyan); color: var(--cyan); }
+.launch button:hover { background: rgba(246,242,234,.12); }
+
+body > header { position: sticky; top: 0; z-index: 5; border-bottom: 1px solid var(--line); background: rgba(9,7,28,.9); }
+a { color: #8fd8ff; }
+:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+h1, h2, h3 { font-family: var(--display); font-stretch: 125%; font-weight: 600; text-wrap: balance; margin: 0; letter-spacing: -0.012em; }
+.num, .inv b, .site .big, .date-line .d, .stat b, .bar .v, td.n, .chip { font-variant-numeric: tabular-nums; font-stretch: 112%; }
+.wrap { max-width: 1240px; margin: 0 auto; padding: 0 clamp(22px, 5vw, 64px); }
+.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+
+.top { display: flex; align-items: center; gap: 16px; padding: 14px 0; flex-wrap: wrap; }
+.brand { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.brand h1 { margin: 0; }
+.logo { display: flex; align-items: center; gap: 12px; color: var(--text); text-decoration: none; }
+.logo .mark { width: 78px; height: 39px; flex: none; overflow: visible; }
+.logo .word { font: 800 25px/1 var(--display); font-stretch: 125%; letter-spacing: .07em; }
+.logo .sep { width: 1px; height: 26px; background: linear-gradient(transparent, rgba(238,240,251,.55), transparent); }
+.logo .ar { font: 600 25px/1 var(--arabic); }
+.brand .tag { color: var(--muted); font-size: 14px; }
+.spacer { flex: 1; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; }
+.seg button { background: none; border: 0; color: var(--muted); padding: 6px 12px; font: 600 13px var(--body); cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--panel-2); color: var(--text); }
+.demo { background: #3a220b; border: 1px solid #8a4b12; color: #fed7aa; padding: 8px 14px; border-radius: var(--r); font-size: 13.5px; margin: 12px 0 0; }
+
+.intro { display: grid; grid-template-columns: minmax(0, 600px) 1fr; gap: 28px; padding: clamp(28px, 7vh, 72px) 0 22px; min-height: min(64vh, 640px); align-items: center; }
+.intro h2 { font-size: clamp(30px, 3.6vw, 50px); font-weight: 560; line-height: 1.02; letter-spacing: -0.02em; margin-bottom: 16px; }
+.intro p { margin: 0 0 10px; max-width: 58ch; color: #e2def0; text-shadow: 0 1px 10px rgba(4,3,15,.9); }
+.intro > div:first-child { position: relative; }
+.intro > div:first-child::before { content: ""; position: absolute; inset: -60px -90px -40px -120px; z-index: -1; pointer-events: none;
+  background: radial-gradient(closest-side, rgba(4,3,15,.62), rgba(4,3,15,0)); }
+.orbit-note { align-self: end; justify-self: end; margin: 0; max-width: 300px; text-align: right; font-size: 13px; color: #bdb8dc; text-shadow: 0 1px 10px rgba(4,3,15,.9); }
+.orbit-note button { margin-top: 8px; background: none; border: 1px solid rgba(246,242,234,.35); color: #f1ede6; border-radius: 999px; padding: 6px 12px; font: 600 12.5px var(--body); cursor: pointer; }
+.orbit-note button:hover { border-color: var(--cyan); }
+.card { border-radius: 14px; padding: 16px 18px; }
+.card h3 { font-size: 14px; font-stretch: 112%; letter-spacing: .01em; margin-bottom: 10px; color: #f3f1ff; }
+.site { border-radius: 14px; padding: 14px 16px 16px; transition: transform .18s ease, border-color .18s ease; }
+.site:hover { transform: translateY(-2px); }
+.site .big { font-size: 28px !important; font-weight: 650; }
+section.block > h2::after { content: ""; display: block; width: 44px; height: 3px; margin-top: 10px; border-radius: 2px; background: var(--pulse); }
+.rail .card, .two .card, .steps .card { height: 100%; }
+#map { border-radius: 14px !important; }
+:focus-visible { outline-color: var(--glow); }
+.inv { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 12px; }
+.inv div { font-size: 12.5px; color: var(--muted); }
+.inv b { display: block; font: 600 22px var(--mono); color: var(--text); }
+.sites { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 18px; }
+.site { background: var(--panel); border: 1px solid rgba(160,150,255,.16); border-radius: var(--r); padding: 14px 16px 16px; cursor: pointer; text-align: left; color: var(--text); font: inherit; display: flex; flex-direction: column; gap: 4px; }
+.site[aria-pressed="true"] { border-color: rgba(176,124,246,.75); }
+.site .flag { font-size: 12px; color: var(--muted); letter-spacing: .04em; }
+.site .nm { font: 700 16px var(--display); }
+.site .big { font: 600 24px var(--mono); }
+.site .big small { font-size: 13px; color: var(--muted); font-weight: 400; }
+.site .vs { font-size: 12.5px; color: var(--muted); }
+.meter { height: 6px; background: var(--panel-2); border-radius: 3px; overflow: hidden; margin-top: 4px; }
+.meter i { display: block; height: 100%; background: var(--pulse); }
+
+.stage { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 14px; }
+.mapbox { position: relative; }
+#map { height: 620px; border-radius: var(--r); border: 1px solid var(--line); background: #0b0a1c; }
+.leaflet-container { font: 13px var(--body); }
+.leaflet-control-attribution { background: rgba(8,6,24,.75) !important; color: var(--muted) !important; }
+.leaflet-control-attribution a { color: var(--muted) !important; }
+.leaflet-bar a { background: var(--panel-2); color: var(--text); border-color: var(--line); }
+.leaflet-tooltip.tip { background: var(--panel); color: var(--text); border: 1px solid var(--line); box-shadow: none; }
+#swipe { position: absolute; top: 0; bottom: 0; width: 0; border-left: 2px solid #fff; z-index: 500; display: none; pointer-events: none; }
+#swipe span { position: absolute; top: 50%; left: -16px; width: 32px; height: 32px; margin-top: -16px; border-radius: 50%; background: #fff; color: #111; display: grid; place-items: center; font-weight: 700; pointer-events: auto; cursor: ew-resize; }
+.swipe-labels { position: absolute; top: 10px; left: 56px; right: 10px; z-index: 500; display: none; justify-content: space-between; pointer-events: none; }
+.swipe-labels b { background: rgba(8,6,24,.8); padding: 3px 8px; border-radius: 6px; font-size: 12.5px; }
+
+.rail { display: flex; flex-direction: column; gap: 12px; }
+.card { background: var(--panel); border: 1px solid rgba(160,150,255,.16); border-radius: var(--r); padding: 16px 18px; }
+.card h3 { font-size: 15px; margin-bottom: 8px; }
+.time { display: flex; align-items: center; gap: 10px; }
+.play { width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--cyan); background: none; color: var(--cyan); cursor: pointer; font-size: 15px; flex: none; }
+.play:hover { background: rgba(63,224,239,.12); }
+input[type=range] { width: 100%; accent-color: var(--violet); }
+.date-line { display: flex; justify-content: space-between; align-items: baseline; margin-top: 6px; gap: 8px; flex-wrap: wrap; }
+.date-line .d { font: 600 18px var(--mono); }
+.chip { display: inline-block; font-size: 11.5px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+.chip.before { border-color: #4d7c0f; color: #bef264; }
+.chip.during { border-color: var(--ember); color: #fdba74; background: rgba(249,115,22,.12); }
+.chip.after { border-color: #9f1239; color: #fda4af; }
+.stat { display: flex; justify-content: space-between; padding: 6px 0; border-top: 1px dashed var(--line); font-size: 14px; gap: 10px; }
+.stat:first-of-type { border-top: 0; }
+.stat b { font: 600 15px var(--mono); white-space: nowrap; }
+.toggles { display: flex; flex-wrap: wrap; gap: 6px; }
+.toggles label { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; padding: 5px 10px; border: 1px solid var(--line); border-radius: 999px; cursor: pointer; background: var(--panel-2); }
+.toggles input { accent-color: var(--violet); margin: 0; }
+.legend { display: grid; gap: 4px; margin-top: 10px; font-size: 12.5px; }
+.legend div { display: flex; align-items: center; gap: 8px; }
+.sw { width: 14px; height: 14px; border-radius: 3px; flex: none; border: 1px solid rgba(255,255,255,.15); }
+.ramp { height: 10px; border-radius: 3px; flex: 1; }
+.listen canvas { width: 100%; height: 76px; display: block; background: var(--panel-2); border-radius: 6px; margin: 8px 0; }
+.btn { background: var(--pulse); color: #0b0820; border: 0; border-radius: 8px; padding: 8px 12px; font: 600 13.5px var(--body); cursor: pointer; }
+.btn.ghost { background: none; color: var(--cyan); border: 1px solid var(--cyan); }
+.btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+section.block { padding: 34px 0 6px; }
+section.block > h2 { font-size: 26px; margin-bottom: 12px; }
+section.block > p.lead { color: #d9d5ea; max-width: 72ch; margin: 0 0 16px; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.chart-box { position: relative; height: 320px; }
+.bars { display: grid; gap: 10px; }
+.bar { display: grid; grid-template-columns: 190px 1fr 120px; gap: 10px; align-items: center; font-size: 13.5px; }
+.bar .track { background: var(--panel-2); border-radius: 4px; height: 12px; overflow: hidden; display: flex; }
+.bar .track i { display: block; height: 100%; }
+.bar .v { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.facts { margin: 0; padding-left: 18px; font-size: 14px; color: #d9d5ea; }
+.facts li { margin-bottom: 4px; }
+.steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; counter-reset: s; }
+.steps .card h3::before { counter-increment: s; content: counter(s) "  "; color: var(--cyan); font-family: var(--mono); }
+.steps p { margin: 0; font-size: 13.5px; color: #d9d5ea; }
+table.data { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+table.data th, table.data td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+table.data td.n { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+table.data th { color: var(--muted); font-weight: 500; }
+.tablewrap { overflow-x: auto; }
+footer { border-top: 1px solid var(--line); margin-top: 40px; padding: 20px 0 40px; font-size: 13px; color: var(--muted); background: rgba(8,6,24,.94); }
+footer ul { margin: 6px 0 0; padding-left: 18px; columns: 2; column-gap: 32px; }
+footer li { margin-bottom: 4px; break-inside: avoid; }
+
+
+/* ---- liquid glass: clear, neutral (no colour tint), frosted backdrop, light caught on the rim, a highlight that follows the pointer.
+   Blur is kept small and only on the panels themselves; body.lite (slow machines) and reduced-transparency fall back to frosted solid. */
+:root { --glass-fill: rgba(255,255,255,.045); --glass-edge: rgba(255,255,255,.14); --panel: rgba(16,17,28,.5); --panel-2: rgba(255,255,255,.07); --line: rgba(255,255,255,.12); --text: #eef0f6; --muted: #a3a8ba; }
+.card, .site, body > header, footer {
+  position: relative;
+  background:
+    radial-gradient(140% 90% at 0% 0%, rgba(255,255,255,.09), rgba(255,255,255,0) 50%),
+    linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.015)),
+    rgba(14, 15, 26, .72);
+  border: 1px solid var(--glass-edge);
+  box-shadow: inset 0 0 18px rgba(255,255,255,.035), 0 22px 44px -28px rgba(0,0,0,.75);
+}
+body > header { position: sticky; top: 0; z-index: 5; border-width: 0 0 1px; border-radius: 0; box-shadow: 0 10px 30px -20px rgba(0,0,0,.8); background: rgba(10,11,20,.42); }
+footer { border-width: 1px 0 0; border-radius: 0; box-shadow: none; }
+.card::before, .site::before {                     /* rim light: bright where light enters (upper left) and exits (lower right) */
+  content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1px; pointer-events: none;
+  background: linear-gradient(135deg, rgba(255,255,255,.5), rgba(255,255,255,.08) 28%, rgba(255,255,255,0) 55%, rgba(255,255,255,.08) 80%, rgba(255,255,255,.32));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude;
+}
+.card::after, .site::after {                       /* specular spot under the pointer */
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0; transition: opacity .25s ease;
+  background: radial-gradient(320px circle at var(--mx, 50%) var(--my, 0%), rgba(255,255,255,.10), rgba(255,255,255,0) 60%);
+}
+.card:hover::after, .site:hover::after { opacity: 1; }
+.card { border-radius: 18px; padding: 16px 18px; }
+.site { border-radius: 18px; padding: 15px 18px 17px; transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease; }
+.site:hover { transform: translateY(-2px); }
+.site[aria-pressed="true"] { border-color: rgba(140,190,255,.55); background-image: radial-gradient(140% 90% at 0% 0%, rgba(160,200,255,.16), rgba(255,255,255,0) 55%), linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.02)); box-shadow: inset 0 0 22px rgba(140,190,255,.08), 0 0 0 1px rgba(111,157,255,.25), 0 18px 46px -22px rgba(63,140,255,.45); }
+.card > *, .site > * { position: relative; z-index: 1; }
+.seg { background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.14); }
+.seg button[aria-pressed="true"] { background: rgba(255,255,255,.14); }
+.toggles label { background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.12); }
+.listen canvas, .meter, .bar .track { background: rgba(255,255,255,.07) !important; }
+.demo { background: rgba(92,56,20,.85); }
+body.lite .card, body.lite .site, body.lite footer { background: rgba(16,17,28,.9); }
+body.lite .navbar { -webkit-backdrop-filter: none; backdrop-filter: none; background: rgba(18,20,34,.97); }
+body.lite .card::after, body.lite .site::after { display: none; }
+@media (prefers-reduced-transparency: reduce) { .card, .site, body > header, footer { -webkit-backdrop-filter: none; backdrop-filter: none; background: rgba(16,17,28,.92); } }
+
+/* ---- floating liquid-glass navbar */
+html { scroll-behavior: smooth; }
+#explorer, section.block[id] { scroll-margin-top: 100px; }
+body > header.nav-shell { transition: transform .32s cubic-bezier(.2,.7,.2,1); will-change: transform; }
+body.nav-hidden > header.nav-shell { transform: translateY(-110%); }
+body > header.nav-shell { position: sticky; top: 0; z-index: 20; padding: 14px clamp(14px, 3vw, 40px) 0; margin-bottom: -6px;
+  background: none !important; border: 0 !important; box-shadow: none !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; pointer-events: none; }
+.navbar { pointer-events: auto; position: relative; max-width: 1240px; margin: 0 auto; height: 66px; display: flex; align-items: center; gap: 10px; padding: 0 9px 0 20px; border-radius: 999px;
+  background: radial-gradient(120% 140% at 15% 0%, rgba(255,255,255,.16), rgba(255,255,255,0) 55%), linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.05)), rgba(16,18,32,.38);
+  -webkit-backdrop-filter: blur(12px) saturate(160%); backdrop-filter: blur(12px) saturate(160%);
+  border: 1px solid rgba(255,255,255,.2); box-shadow: inset 0 0 26px rgba(255,255,255,.06), 0 14px 40px -16px rgba(0,0,0,.7); }
+.navbar::before { content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1.2px; pointer-events: none;
+  background: linear-gradient(100deg, rgba(255,255,255,.65), rgba(255,255,255,.1) 25%, rgba(255,255,255,0) 50%, rgba(255,255,255,.12) 75%, rgba(255,255,255,.5));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
+.navbar .logo { flex: none; gap: 10px; }
+.navbar .logo .mark { width: 62px; height: 31px; }
+.navbar .logo .word { font-size: 21px; }
+.navbar .logo .ar { font-size: 22px; }
+.navbar .logo .sep { height: 22px; }
+.links { display: flex; gap: 2px; list-style: none; margin: 0 auto; padding: 0; }
+.links a { display: block; padding: 11px 14px; border-radius: 999px; color: rgba(238,240,246,.84); text-decoration: none; font: 500 15px/1 var(--body); transition: background-color .2s ease, color .2s ease; }
+.links a:hover { color: #fff; background: rgba(255,255,255,.09); }
+.links a[aria-current="true"] { color: #0c0f1c; background: linear-gradient(180deg, rgba(255,255,255,.96), rgba(228,234,252,.86)); box-shadow: 0 6px 16px -8px rgba(0,0,0,.6); }
+.navbar .seg { flex: none; height: 46px; align-items: center; padding: 3px; gap: 2px; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.16); }
+.navbar .seg button { height: 38px; min-width: 42px; border-radius: 999px; padding: 0 10px; }
+.navbar .seg button[aria-pressed="true"] { background: rgba(255,255,255,.9); color: #0c0f1c; }
+.cta { flex: none; height: 50px; display: inline-flex; align-items: center; padding: 0 24px; border-radius: 999px; text-decoration: none; color: #fff; font: 600 15px/1 var(--body);
+  background: linear-gradient(90deg, #22a6e0, #5b7cf6 55%, #8f63ee); box-shadow: inset 0 0 0 1px rgba(255,255,255,.18), 0 10px 24px -12px rgba(80,110,255,.9); transition: filter .2s ease; }
+.cta:hover { filter: brightness(1.12); color: #fff; }
+.intro { padding-top: clamp(40px, 9vh, 96px); }
+@media (max-width: 1180px) { .links { display: none; } .navbar .seg { margin-left: auto; } }
+@media (max-width: 560px) { .cta { display: none; } .navbar { height: 58px; padding-left: 14px; } .navbar .logo .ar, .navbar .logo .sep { display: none; } }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+/* ---- readability & usability pass (design critique + WCAG review) */
+body { font-size: 16px; line-height: 1.6; }
+:root { --muted: #b9bdcc; }
+#scrim { position: fixed; inset: 0; z-index: 0; pointer-events: none; background: radial-gradient(120% 90% at 50% 40%, rgba(5,6,12,.55), rgba(5,6,12,.8)); opacity: var(--scrim, 0); transition: opacity .2s linear; }
+.intro p { font-size: 17px; line-height: 1.6; }
+section.block > p, section.block .lead { font-size: 16px; max-width: 68ch; }
+.card h3 { font-size: 15.5px !important; margin-bottom: 12px !important; }
+.hint { margin: 10px 0 0; font-size: 13.5px; line-height: 1.5; color: var(--muted); }
+.legend { font-size: 13px !important; line-height: 1.7; }
+.muted { color: var(--muted); }
+/* map workspace */
+.stage { gap: 16px; align-items: start; }
+.stage .mapbox { position: sticky; top: 96px; }
+#map { height: min(860px, calc(100vh - 130px)); min-height: 440px; }
+body.nav-hidden .stage .mapbox { top: 16px; }
+.rail { display: grid; gap: 14px; }
+.toggles { display: grid !important; gap: 2px !important; }
+.toggles label { display: flex !important; justify-content: space-between; align-items: center; min-height: 44px; padding: 0 12px !important; border-radius: 12px !important; background: none !important; border: 0 !important; font-size: 14.5px !important; cursor: pointer; }
+.toggles label:hover { background: rgba(255,255,255,.06) !important; }
+.toggles input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.toggles i { position: relative; width: 40px; height: 24px; border-radius: 999px; background: rgba(255,255,255,.16); flex: none; transition: background .2s ease; }
+.toggles i::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: transform .2s ease; box-shadow: 0 1px 3px rgba(0,0,0,.4); }
+.toggles input:checked + i { background: linear-gradient(90deg, #22a6e0, #8f63ee); }
+.toggles input:checked + i::after { transform: translateX(16px); }
+.toggles input:focus-visible + i { outline: 2px solid var(--cyan); outline-offset: 2px; }
+.play { width: 44px !important; height: 44px !important; }
+.btn, .btn.ghost { min-height: 44px; padding: 0 18px; border-radius: 999px; font-weight: 600; }
+.btn { background: linear-gradient(90deg, #22a6e0, #5b7cf6 55%, #8f63ee) !important; color: #fff !important; border: 0; }
+.btn.ghost { background: rgba(255,255,255,.06) !important; color: var(--text) !important; border: 1px solid rgba(255,255,255,.2) !important; }
+.verdict { margin: 0 0 12px; font: 600 17px/1.35 var(--display); font-stretch: 105%; }
+.verdict.burn { color: #fdba74; } .verdict.ok { color: #bef264; } .verdict.bare { color: #e2e8f0; }
+.insp-stats, .kpis { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 12px; }
+.kv, .kpi { padding: 10px 12px; border-radius: 12px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08); }
+.kv span, .kpi span { display: block; font-size: 12.5px; color: var(--muted); }
+.kv b, .kpi b { font: 650 19px/1.2 var(--mono); font-stretch: 110%; font-variant-numeric: tabular-nums; }
+.kv.burn b, .kpi.burn b { color: #fdba74; } .kv.up b, .kpi.up b { color: #bef264; }
+.kpis { grid-template-columns: repeat(3, 1fr); margin: 4px 0 16px; }
+.kpi { padding: 14px 16px; border-radius: 16px; background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.03));  }
+.kpi b { font-size: 28px; display: block; margin: 2px 0; }
+.kpi small { font-size: 12.5px; color: var(--muted); }
+#spark { width: 100%; height: auto; display: block; border-radius: 10px; background: rgba(0,0,0,.18); }
+.rail .card, .two .card, .steps .card { height: auto !important; }
+.two { align-items: start; }
+.optical .bar .v { color: #a5f3fc; }
+@media (max-width: 720px) { .kpis { grid-template-columns: 1fr; } }
+
+@media (max-width: 1050px) {
+  .intro, .stage, .two { grid-template-columns: 1fr; }
+  .intro { min-height: 0; }
+  .orbit-note { justify-self: start; text-align: left; margin-top: 30vh; }
+  .steps { grid-template-columns: 1fr 1fr; }
+  #map { height: 480px; }
+  footer ul { columns: 1; }
+}
+@media (max-width: 560px) {
+  .sites { grid-template-columns: 1fr; }
+  .steps { grid-template-columns: 1fr; }
+  .bar { grid-template-columns: 110px 1fr 90px; }
+  .brand h1 { font-size: 24px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+@media (max-width: 560px) { .launch { flex-direction: column; align-items: flex-start; } }
+
+/* mission: problem -> data -> solution -> people */
+.mission { margin-bottom: 30px; }
+.flow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+.m-card { display: flex; flex-direction: column; gap: 6px; }
+.m-card p, .m-list { color: #d9dbe6; font-size: 15px; line-height: 1.55; margin: 0; }
+.m-list { padding-left: 18px; display: grid; gap: 6px; }
+.m-ico { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.1); margin-bottom: 4px; }
+.m-ico svg { width: 22px; height: 22px; fill: none; stroke: #9fdcf2; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.m-card:first-child .m-ico svg { stroke: #fdba74; }
+@media (max-width: 1050px) { .flow { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 620px) { .flow { grid-template-columns: 1fr; } }
+/* hangar */
+.hangar { display: grid; grid-template-columns: 1.55fr 1fr; gap: 14px; align-items: stretch; }
+.hg-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.hg-tabs button { min-height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.05); color: #e9ebf3; font: 600 14px var(--body); cursor: pointer; }
+.hg-tabs button:hover { background: rgba(255,255,255,.1); }
+.hg-tabs button[aria-selected="true"] { background: linear-gradient(180deg, rgba(255,255,255,.96), rgba(228,234,252,.86)); color: #0c0f1c; border-color: transparent; }
+.hg-stage { position: relative; aspect-ratio: 16 / 10; border-radius: 12px; overflow: hidden;
+  background: radial-gradient(120% 90% at 50% 30%, rgba(70,90,150,.35), rgba(8,10,22,.6) 70%); border: 1px solid rgba(255,255,255,.08); }
+.hg-stage canvas, .hg-embed, .hg-embed iframe { position: absolute; inset: 0; width: 100%; height: 100%; display: block; border: 0; }
+.hg-poster { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.hg-go { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); min-height: 44px; padding: 0 22px; border-radius: 999px; }
+.hg-stage canvas { cursor: grab; touch-action: none; } .hg-stage canvas:active { cursor: grabbing; }
+.hg-status { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); margin: 0; padding: 8px 14px; border-radius: 999px; background: rgba(8,10,22,.7); color: #e9ebf3; font-size: 14px; }
+.hg-facts h3 { font-size: 17px; margin-bottom: 12px; }
+.kv-list { margin: 0 0 14px; display: grid; gap: 0; }
+.kv-list > div { display: grid; grid-template-columns: 8.5em 1fr; gap: 12px; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,.08); }
+.kv-list dt { color: var(--muted); font-size: 14px; } .kv-list dd { margin: 0; font-size: 15px; color: #f1f2f7; }
+.credit { font-size: 13px; color: var(--muted); line-height: 1.5; margin: 10px 0 0; } .credit a { color: #9fdcf2; }
+@media (max-width: 1050px) { .hangar { grid-template-columns: 1fr; } }
+@media (max-width: 560px) { .kv-list > div { grid-template-columns: 1fr; gap: 2px; } }
+
+/* ---------- phones and tablets ---------- */
+html, .wrap { overflow-x: clip; }                            /* decorative glow never widens the page */
+.menu-btn { display: none; flex: none; width: 44px; height: 44px; border-radius: 999px; border: 1px solid rgba(255,255,255,.16); background: rgba(255,255,255,.06); color: #fff; cursor: pointer; place-items: center; }
+.menu-btn svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.navbar.open .menu-btn svg path { d: path("M6 6l12 12M18 6L6 18"); }
+@media (max-width: 1180px) {
+  .menu-btn { display: grid; }
+  .navbar .seg { margin-left: auto; }
+  .navbar.open .links { display: flex; flex-direction: column; gap: 2px; position: absolute; top: calc(100% + 8px); left: 0; right: 0; margin: 0;
+    padding: 8px; border-radius: 22px; background: rgba(16,18,30,.97); border: 1px solid rgba(255,255,255,.12); box-shadow: 0 18px 40px rgba(0,0,0,.45);
+    max-height: calc(100vh - 100px); max-height: calc(100dvh - 100px); overflow-y: auto; overscroll-behavior: contain; }
+  .navbar.open .links a { padding: 13px 16px; border-radius: 14px; font-size: 16px; }
+}
+@media (max-width: 760px) {
+  .intro > div:first-child::before { inset: -40px -16px -30px -16px; }      /* the text halo stays inside the screen */
+  .stage .mapbox { position: static; }
+  #map { height: 58vh; height: 58svh; min-height: 300px; max-height: 520px; }
+  .block { scroll-margin-top: 80px; }
+  h1 { font-size: clamp(30px, 8.6vw, 44px); overflow-wrap: anywhere; hyphens: auto; }
+}
+/* launch on a portrait screen: thin bars, the captions sit on a soft gradient over the picture */
+@media (orientation: portrait) {
+  .hud { --bar: 7.5vh; height: 7.5vh; min-height: 52px; padding: 0 16px; gap: 10px; }
+  .launch { --bar: auto; height: auto; flex-direction: column; align-items: stretch; gap: 12px;
+    padding: 56px 18px calc(18px + env(safe-area-inset-bottom)); background: linear-gradient(to top, rgba(0,0,0,.92) 45%, rgba(0,0,0,0)); }
+  .launch p { font-size: 15px; max-width: none; }
+  .launch .ctrls { justify-content: flex-end; }
+  .launch button { min-height: 40px; padding: 8px 16px; font-size: 14px; }
+}
+</style>
+</head>
+<body>
+<script>
+  // play the launch once; afterwards (or with reduced motion) open straight onto the orbit
+  (function () {
+    var still = matchMedia("(prefers-reduced-motion: reduce)").matches, seen = false;
+    try { seen = localStorage.getItem("nabd-launch-seen") === "1"; } catch (e) {}
+    document.documentElement.dataset.launch = still ? "still" : seen ? "orbit" : "play";
+    if (!still && !seen) document.body.classList.add("launching");
+    setTimeout(function () { if (!window.__launchOK) document.body.classList.remove("launching"); }, 8000);
+  })();
+</script>
+<canvas id="space" aria-hidden="true"></canvas>
+<div id="scrim" aria-hidden="true"></div>
+<div class="title-card" aria-hidden="true"><div class="logo-big"><svg class="mark" viewBox="0 0 160 80" aria-hidden="true" focusable="false">
+  <defs>
+    <linearGradient id="t-pulse" x1="0" y1="0" x2="160" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#3fe0ef"/><stop offset=".55" stop-color="#6f9dff"/><stop offset="1" stop-color="#b07cf6"/></linearGradient>
+    <radialGradient id="t-planet" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#e3d4ff"/><stop offset=".55" stop-color="#9d74f2"/><stop offset="1" stop-color="#5b3cc4"/></radialGradient>
+    <filter id="t-glow" x="-20%" y="-60%" width="140%" height="220%"><feGaussianBlur stdDeviation="2.6"/></filter>
+  </defs>
+  <path class="glow" d="M2 52H38C42 52 44 46 47 46S52 52 56 52H64L70 40L78 68L88 16L97 58L103 46H112C116 46 118 40 121 40S126 46 130 46H158" fill="none" stroke="url(#t-pulse)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" filter="url(#t-glow)" opacity=".55"/>
+  <path class="line" d="M2 52H38C42 52 44 46 47 46S52 52 56 52H64L70 40L78 68L88 16L97 58L103 46H112C116 46 118 40 121 40S126 46 130 46H158" fill="none" stroke="url(#t-pulse)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <g class="planet"><circle cx="88" cy="9.5" r="5.6" fill="url(#t-planet)"/><ellipse cx="88" cy="9.5" rx="10" ry="3.1" fill="none" stroke="#c9b4ff" stroke-width="1.2" transform="rotate(-18 88 9.5)"/></g>
+  <path class="spark" d="M56 24l1.2 3 3 1.2-3 1.2-1.2 3-1.2-3-3-1.2 3-1.2zM124 22l1 2.5 2.5 1-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1z" fill="#d6ecff"/>
+</svg><b>NABD</b><i></i><em lang="ar">نبض</em></div><span data-i18n="title_sub">Le pouls des forêts, vu depuis l'espace</span></div>
+<div class="hud" id="hud" aria-hidden="true">
+  <span class="hud-id">NISAR · GSLV-F16</span>
+  <span class="hud-clock" id="hud-clock">T−00:00:04</span>
+  <span class="hud-phase" id="hud-phase"></span>
+  <span class="hud-note" data-i18n="hud_note">Reconstitution · temps accéléré</span>
+</div>
+<div class="launch" id="launch">
+  <p id="launch-cap" aria-live="polite"></p>
+  <div class="ctrls">
+    <button id="launch-sound" type="button" aria-pressed="false" data-i18n="sound">Son</button>
+    <button id="launch-skip" type="button" data-i18n="skip">Passer l'intro</button>
+  </div>
+</div>
+<header class="nav-shell">
+  <nav class="navbar" aria-label="Navigation">
+    <a class="logo" href="#top" aria-label="NABD نبض"><svg class="mark" viewBox="0 0 160 80" aria-hidden="true" focusable="false">
+  <defs>
+    <linearGradient id="g-pulse" x1="0" y1="0" x2="160" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#3fe0ef"/><stop offset=".55" stop-color="#6f9dff"/><stop offset="1" stop-color="#b07cf6"/></linearGradient>
+    <radialGradient id="g-planet" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#e3d4ff"/><stop offset=".55" stop-color="#9d74f2"/><stop offset="1" stop-color="#5b3cc4"/></radialGradient>
+    <filter id="g-glow" x="-20%" y="-60%" width="140%" height="220%"><feGaussianBlur stdDeviation="2.6"/></filter>
+  </defs>
+  <path class="glow" d="M2 52H38C42 52 44 46 47 46S52 52 56 52H64L70 40L78 68L88 16L97 58L103 46H112C116 46 118 40 121 40S126 46 130 46H158" fill="none" stroke="url(#g-pulse)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" filter="url(#g-glow)" opacity=".55"/>
+  <path class="line" d="M2 52H38C42 52 44 46 47 46S52 52 56 52H64L70 40L78 68L88 16L97 58L103 46H112C116 46 118 40 121 40S126 46 130 46H158" fill="none" stroke="url(#g-pulse)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <g class="planet"><circle cx="88" cy="9.5" r="5.6" fill="url(#g-planet)"/><ellipse cx="88" cy="9.5" rx="10" ry="3.1" fill="none" stroke="#c9b4ff" stroke-width="1.2" transform="rotate(-18 88 9.5)"/></g>
+  <path class="spark" d="M56 24l1.2 3 3 1.2-3 1.2-1.2 3-1.2-3-3-1.2 3-1.2zM124 22l1 2.5 2.5 1-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1z" fill="#d6ecff"/>
+</svg><span class="word">NABD</span><span class="sep"></span><span class="ar" lang="ar">نبض</span></a>
+    <button class="menu-btn" id="menu-btn" type="button" aria-expanded="false" aria-controls="nav-links" aria-label="Menu">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+    </button>
+    <ul class="links" id="nav-links">
+      <li><a href="#mission" data-i18n="nav_mission">Mission</a></li>
+      <li><a href="#explorer" data-i18n="nav_map">Carte</a></li>
+      <li><a href="#pouls" data-i18n="nav_pulse">Pouls</a></li>
+      <li><a href="#chiffres" data-i18n="nav_compare">Chiffres</a></li>
+      <li><a href="#methode" data-i18n="nav_method">Méthode</a></li>
+      <li><a href="#satellite" data-i18n="nav_sat">Satellite</a></li>
+      <li><a href="#donnees" data-i18n="nav_data">Données</a></li>
+    </ul>
+    <div class="seg" role="group" aria-label="Langue / Language">
+      <button id="lang-fr" aria-pressed="true">FR</button>
+      <button id="lang-en" aria-pressed="false">EN</button>
+    </div>
+    <a class="cta" href="#explorer" data-i18n="nav_cta">Explorer la carte</a>
+  </nav>
+</header>
+
+<main class="wrap" id="top">
+  <div id="demo-banner" class="demo" hidden data-i18n="demo">Données radar de démonstration (synthétiques) : le pipeline et l'interface sont réels et les dates des passages NISAR sont les vraies. Les cartes se remplissent avec les vraies images dès leur téléchargement. Les chiffres officiels des incendies sont réels.</div>
+
+  <div class="intro">
+    <div>
+      <h2 data-i18n="h_intro">Juillet 2026 : la Méditerranée brûle. Un radar voit à travers la fumée.</h2>
+      <p data-i18n="p_intro1">En dix jours, deux feux records ont dévoré près de 1 000 km² de forêt en Espagne et en France. Au Maroc, le Moyen Atlas a brûlé aussi. Pendant ce temps, NISAR (NASA–ISRO) passait au-dessus tous les 12 jours, de jour comme de nuit.</p>
+      <p data-i18n="p_intro2">Son radar en bande L (24 cm) traverse la fumée et « touche » les branches et les troncs. Quand une forêt brûle, ce signal s'effondre. NABD mesure cette chute pixel par pixel : où le feu est passé, avec quelle violence, et si la forêt repart.</p>
+      <div class="inv" id="inventory"></div>
+    </div>
+    <p class="orbit-note"><span data-i18n="orbit_note">NISAR à 747 km d'altitude, vue reconstituée. Il repasse au-dessus de chaque forêt tous les 12 jours.</span><br>
+      <button id="launch-replay" type="button" data-i18n="replay">Revoir le lancement</button></p>
+  </div>
+  <section class="block mission" id="mission" aria-labelledby="mission-h">
+    <h2 id="mission-h" data-i18n="h_mission">Du radar à la décision</h2>
+    <div class="flow">
+      <article class="card m-card">
+        <span class="m-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3c1 3.5 5 5.5 5 10a5 5 0 0 1-10 0c0-2 1-3.4 2-4.4.3 1.6 1.2 2.6 2.3 2.9-.6-3.2.2-6 .7-8.5z"/></svg></span>
+        <h3 data-i18n="m1_h">Le problème</h3>
+        <p data-i18n="m1">Pendant un grand feu, la fumée et les nuages cachent le sol aux satellites optiques. Les bilans officiels arrivent ensuite avec un seul chiffre : une surface. Ils ne disent pas où le feu a frappé le plus fort, ni si la forêt repart.</p>
+      </article>
+      <article class="card m-card">
+        <span class="m-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="6" cy="18" r="1.6"/><path d="M6 12a6 6 0 0 1 6 6M6 6.5a11.5 11.5 0 0 1 11.5 11.5"/></svg></span>
+        <h3 data-i18n="m2_h">Les données de la NASA</h3>
+        <ul class="m-list">
+          <li data-i18n="m2a">NISAR (NASA–ISRO) : radar bande L qui traverse la fumée, de jour comme de nuit. Un passage tous les 12 jours, données gratuites (ASF DAAC).</li>
+          <li data-i18n="m2b">OPERA DIST-ALERT (NASA/JPL) : perte de végétation vue par Landsat et Sentinel-2, pour vérifier le radar.</li>
+          <li data-i18n="m2c">Blue Marble (NASA) : la Terre du globe 3D.</li>
+        </ul>
+      </article>
+      <article class="card m-card">
+        <span class="m-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 12h4l2.5-6 4 12 2.5-6h5"/></svg></span>
+        <h3 data-i18n="m3_h">La solution NABD</h3>
+        <p data-i18n="m3">Cinq scripts Python ouverts cherchent les passages, ne téléchargent que la fenêtre du feu, mesurent la chute du signal radar et la croisent avec l'optique. Le site rejoue chaque passage : on clique un point et on lit son histoire.</p>
+      </article>
+      <article class="card m-card">
+        <span class="m-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0 1 12 0M16 5.5a3 3 0 0 1 0 5.5M18 20a6 6 0 0 0-3-5.2"/></svg></span>
+        <h3 data-i18n="m4_h">Pour qui</h3>
+        <ul class="m-list">
+          <li data-i18n="m4a">Services forestiers et protection civile : la cicatrice et sa sévérité, sans attendre un ciel dégagé.</li>
+          <li data-i18n="m4b">Communes et associations de reboisement : savoir où replanter et suivre la repousse.</li>
+          <li data-i18n="m4c">Chercheurs, élèves, citoyens : méthode documentée, code et données ouverts.</li>
+        </ul>
+      </article>
+    </div>
+  </section>
+
+  <div class="sites" id="sites" role="group" aria-label="Incendies"></div>
+
+  <div class="stage" id="explorer">
+    <div class="mapbox">
+      <div id="map" role="region" aria-label="Carte radar"></div>
+      <div id="swipe"><span aria-hidden="true">⇆</span></div>
+      <div class="swipe-labels" id="swipe-labels"><b data-i18n="before">Avant le feu</b><b data-i18n="after">Après le feu</b></div>
+    </div>
+    <aside class="rail">
+      <div class="card">
+        <div class="time">
+          <button class="play" id="play" aria-label="Lecture">▶</button>
+          <input type="range" id="slider" min="0" max="0" value="0" aria-label="Passage NISAR">
+        </div>
+        <div class="date-line"><span class="d" id="date">–</span><span id="phase" class="chip"></span></div>
+        <div class="muted" style="font-size:12.5px;margin-top:2px" id="pass"></div>
+        <div id="stats" style="margin-top:8px"></div>
+      </div>
+      <div class="card">
+        <h3 data-i18n="layers">Couches</h3>
+        <div class="toggles" id="toggles"></div>
+        <div class="legend" id="legend"></div>
+      </div>
+      <div class="card inspect" id="inspect">
+        <h3 data-i18n="insp_h">Inspecter un point</h3>
+        <p class="verdict" id="insp-verdict" aria-live="polite">–</p>
+        <div class="insp-stats" id="insp-stats"></div>
+        <canvas id="spark" width="640" height="190" aria-label="Historique radar du point choisi"></canvas>
+        <p class="hint" data-i18n="insp_hint">Cliquez n'importe où sur la carte pour lire l'histoire radar de ce point.</p>
+        <div class="btn-row">
+          <button class="btn" id="listen-pt" data-i18n="listen_pt">Écouter ce point</button>
+          <button class="btn ghost" id="listen-stop" data-i18n="stop">Stop</button>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <section class="block" id="pouls">
+    <h2 data-i18n="h_pulse">Le pouls de la forêt</h2>
+    <p class="lead" data-i18n="p_pulse">Chaque point est un passage de NISAR. La courbe montre le signal HV de la zone brûlée moins celui de la forêt intacte voisine, ce qui annule les effets de saison et d'orbite. Avant le feu, elle reste à plat près de 0. Pendant le feu (bande orange), elle plonge. Après, on voit si la forêt repart.</p>
+    <div class="kpis" id="pulse-kpis"></div>
+    <div class="card"><div class="chart-box"><canvas id="chart-pulse" aria-label="Pouls de la forêt"></canvas></div></div>
+  </section>
+
+  <section class="block" id="chiffres">
+    <h2 data-i18n="h_compare">Le radar contre les chiffres officiels</h2>
+    <p class="lead" data-i18n="p_compare">Surface brûlée mesurée automatiquement par NISAR (périmètre de la cicatrice), comparée au bilan des autorités. Chaque barre est en pourcentage du chiffre officiel. Le radar bande L voit surtout le bois : les herbes et les broussailles brûlées changent peu son signal.</p>
+    <div class="two">
+      <div class="card"><h3 data-i18n="area_h">Surface brûlée</h3><div class="bars" id="area-bars"></div></div>
+      <div class="card optical" id="optical-card" hidden><h3 data-i18n="opt_h">Vérification par les satellites optiques (NASA OPERA)</h3><div class="bars" id="opt-bars"></div><p class="hint" data-i18n="opt_hint">OPERA DIST-ALERT repère la végétation perdue avec Landsat et Sentinel-2. Le radar voit à travers les nuages et la fumée ; l'optique non, mais elle confirme.</p></div>
+      <div class="card"><h3 data-i18n="sev_h">Sévérité (chute du signal HV)</h3><div class="bars" id="sev-bars"></div>
+        <p class="muted" style="font-size:12.5px;margin:10px 0 0" data-i18n="sev_note">Faible : −1 à −2,5 dB · Modérée : −2,5 à −4 dB · Forte : plus de −4 dB, soit 2,5 fois moins de signal.</p></div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 id="facts-h">–</h2>
+    <div class="two">
+      <div class="card"><ul class="facts" id="facts"></ul></div>
+      <div class="card"><h3 data-i18n="prog_h">Progression vue par NISAR</h3><div class="bars" id="prog-bars"></div>
+        <p class="muted" style="font-size:12.5px;margin:10px 0 0" data-i18n="prog_note">Ce qui apparaissait déjà « éteint » sur un passage pendant le feu, puis le reste, vu au premier passage après le feu. Il n'y a pas d'image NISAR du 27 juillet au 10 août.</p></div>
+    </div>
+  </section>
+
+  <section class="block" id="methode">
+    <h2 data-i18n="h_method">Comment ça marche</h2>
+    <div class="steps">
+      <div class="card"><h3 data-i18n="s1_h">Données NISAR</h3><p data-i18n="s1">Produit GCOV bande L, HH et HV, corrigé du relief. Seule la fenêtre de chaque feu est découpée côté NASA : quelques Mo au lieu de 6 Go par image. Les cadres voisins d'un même passage sont assemblés.</p></div>
+      <div class="card"><h3 data-i18n="s2_h">Avant / après</h3><p data-i18n="s2">Chaque passage est d'abord calé sur la partie non brûlée de l'image (cela efface les jours de pluie et les sauts d'étalonnage). Pour chaque orbite, ΔHV = médiane des passages de 10 à 120 jours après le feu − médiane des passages des 75 jours d'avant. La chute continue de se creuser pendant des semaines : il faut regarder longtemps après. Les orbites sont moyennées.</p></div>
+      <div class="card"><h3 data-i18n="s3_h">Cicatrice</h3><p data-i18n="s3">Une zone est comptée comme brûlée si elle portait de la végétation (HV > −22 dB) et que son HV lissé chute de plus de 1 dB. On ne garde que les taches reliées au feu (pas les coupes de bois ou les récoltes ailleurs). Le périmètre referme les trous de moins de 200 m, comme les bilans officiels.</p></div>
+      <div class="card"><h3 data-i18n="s4_h">Pouls et vérification</h3><p data-i18n="s4">On suit, passage par passage, la cicatrice comparée à la forêt témoin. Les surfaces sont comparées aux bilans officiels. Les passages qui couvrent moins de 60 % de la zone sont signalés.</p></div>
+    </div>
+  </section>
+
+  <section class="block" id="satellite" aria-labelledby="sat-h">
+    <h2 id="sat-h" data-i18n="h_sat">NISAR et sa fusée, en 3D</h2>
+    <p class="lead" data-i18n="p_sat">Faites tourner le satellite et sa fusée à la souris ou au doigt : ce sont les modèles de l'intro.</p>
+    <div class="hangar" id="hangar" data-loading="Chargement du modèle…" data-failed="Le modèle n'a pas pu être chargé.">
+      <div class="card hg-view">
+        <div class="hg-tabs" role="tablist" aria-label="Modèles 3D">
+          <button role="tab" data-model="nisar" aria-selected="true" data-i18n="hg_nisar">NISAR</button>
+          <button role="tab" data-model="gslv" aria-selected="false" data-i18n="hg_gslv">GSLV-F16</button>
+        </div>
+        <div class="hg-stage">
+          <img class="hg-poster" src="hangar/nisar-poster.webp" alt="Le satellite NISAR, antenne de 12 m déployée" width="942" height="588" loading="lazy" decoding="async">
+          <button class="btn hg-go" id="hg-go" type="button" data-i18n="hg_go">Afficher en 3D</button>
+          <canvas aria-label="Modèle 3D" role="img" hidden></canvas>
+          <div class="hg-embed" hidden></div>
+          <p class="hg-status" hidden></p>
+          <noscript><p class="hg-status">JavaScript est nécessaire pour la vue 3D.</p></noscript>
+        </div>
+        <p class="hint" data-i18n="hg_hint">Glisser pour tourner, molette ou pincement pour zoomer.</p>
+      </div>
+      <div class="card hg-facts">
+        <div data-facts="nisar">
+          <h3 data-i18n="f_nisar_h">NISAR, le satellite</h3>
+          <dl class="kv-list">
+            <div><dt data-i18n="f_mass">Masse au lancement</dt><dd>2 393 kg</dd></div>
+            <div><dt data-i18n="f_ant">Antenne</dt><dd data-i18n="f_ant_v">réflecteur de 12 m sur un bras de 9 m</dd></div>
+            <div><dt data-i18n="f_radar">Radars</dt><dd data-i18n="f_radar_v">bande L 24 cm (NASA) et bande S 12 cm (ISRO)</dd></div>
+            <div><dt data-i18n="f_orbit">Orbite</dt><dd data-i18n="f_orbit_v">héliosynchrone, 747 km, 98,4°</dd></div>
+            <div><dt data-i18n="f_revisit">Revisite</dt><dd data-i18n="f_revisit_v">même endroit tous les 12 jours</dd></div>
+          </dl>
+          <button class="btn ghost" id="hg-sketchfab" type="button" data-i18n="hg_sf">Voir le modèle détaillé (Sketchfab)</button>
+          <p class="credit" data-i18n="hg_sf_credit">Modèle détaillé : « NISAR Satellite ISRO - NASA Joint Mission » par MechLab3D, hébergé par Sketchfab. Il se charge seulement si vous cliquez.</p>
+        </div>
+        <div data-facts="gslv" hidden>
+          <h3 data-i18n="f_gslv_h">GSLV-F16, la fusée de NISAR</h3>
+          <dl class="kv-list">
+            <div><dt data-i18n="f_launch">Lancement</dt><dd data-i18n="f_launch_v">30 juillet 2025, 17 h 40 (heure indienne), Sriharikota</dd></div>
+            <div><dt data-i18n="f_height">Hauteur</dt><dd>51,7 m</dd></div>
+            <div><dt data-i18n="f_liftoff">Masse au décollage</dt><dd>420 t</dd></div>
+            <div><dt data-i18n="f_stages">Étages</dt><dd data-i18n="f_stages_v">poudre S139 + 4 propulseurs liquides L40, étage liquide, étage cryogénique</dd></div>
+            <div><dt data-i18n="f_fair">Coiffe</dt><dd data-i18n="f_fair_v">ogive de 4 m de diamètre</dd></div>
+          </dl>
+          <p class="credit" data-i18n="f_gslv_note">Premier vol d'une GSLV vers une orbite héliosynchrone. Modèle 3D NABD, fait à la main d'après la configuration publiée par l'ISRO.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="donnees">
+    <h2 data-i18n="h_data">Les données utilisées et disponibles</h2>
+    <p class="lead" data-i18n="p_data">Toutes viennent du catalogue de la NASA (Earthdata, ASF). Comptage du 14 novembre 2026 : relancez 01_search.py pour le chiffre à jour.</p>
+    <div class="card tablewrap"><table class="data" id="data-table"></table></div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div data-i18n="credits">Projet NASA Space Apps Challenge 2026, défi « Dancing with the SARs ». Code ouvert. Radar : NASA/JPL–ISRO NISAR via ASF DAAC. Fond de carte : Esri.</div>
+    <p id="context" style="max-width:90ch"></p>
+    <div data-i18n="sources_h">Sources des bilans officiels :</div>
+    <ul id="sources"></ul>
+  </div>
+</footer>
+
+<script type="importmap">{ "imports": { "three": "./vendor/three/three.module.min.js", "three/addons/": "./vendor/three/addons/" } }</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="data/data.js"></script>
+<script>
+(function () {
+"use strict";
+const D = window.NABD;
+const ORDER = D.order;
+
+// ---------------------------------------------------------------- i18n
+const EN = {
+  tagline: "Summer of fire 2026: the pulse of forests, seen by the NISAR radar",
+  insp_h: "Inspect a point", insp_hint: "Click anywhere on the map to read the radar story of that point.", listen_pt: "Listen to this point",
+  opt_h: "Cross-check by optical satellites (NASA OPERA)", opt_hint: "OPERA DIST-ALERT flags lost vegetation with Landsat and Sentinel-2. Radar sees through cloud and smoke; optical cannot, but it confirms.",
+  nav_map: "Map", nav_pulse: "Pulse", nav_compare: "Figures", nav_method: "Method", nav_data: "Data", nav_cta: "Explore the map",
+  demo: "Demo radar data (synthetic): the pipeline and the interface are real, and the NISAR pass dates are the real ones. The maps fill with the real images as soon as they are downloaded. Official fire figures are real.",
+  h_intro: "July 2026: the Mediterranean burns. A radar sees through the smoke.",
+  p_intro1: "In ten days, two record fires consumed nearly 1,000 km² of forest in Spain and France. In Morocco, the Middle Atlas burned too. Meanwhile NISAR (NASA–ISRO) flew over every 12 days, day and night.",
+  p_intro2: "Its L-band radar (24 cm) goes through smoke and 'touches' branches and trunks. When a forest burns, that signal collapses. NABD measures the drop pixel by pixel: where the fire went, how violently, and whether the forest comes back.",
+  before: "Before the fire", after: "After the fire", layers: "Layers",
+  listen_h: "Listen to the forest",
+  listen_hint: "Click the map: the radar time series of that spot becomes a melody. Intact forest holds its note; where the fire passes, the melody collapses with a crackle.",
+  listen_site: "Play the scar", stop: "Stop",
+  h_pulse: "The pulse of the forest",
+  p_pulse: "Each dot is one NISAR pass. The curve is the HV signal of the burned area minus that of the nearby intact forest, which cancels season and orbit effects. Before the fire it stays flat near 0. During the fire (orange band) it plunges. Afterwards it shows whether the forest recovers.",
+  h_compare: "Radar versus official figures",
+  p_compare: "Burned area measured automatically by NISAR (scar perimeter), compared with the authorities' figures. Each bar is a percentage of the official figure. L-band radar mostly sees wood: burned grass and scrub barely change its signal.",
+  area_h: "Burned area", sev_h: "Severity (drop of the HV signal)",
+  sev_note: "Low: −1 to −2.5 dB · Moderate: −2.5 to −4 dB · High: more than −4 dB, i.e. 2.5 times less signal.",
+  prog_h: "Spread seen by NISAR",
+  prog_note: "What already looked 'switched off' on a pass during the fire, then the rest, seen on the first pass after it. NISAR has no images from 27 July to 10 August.",
+  h_method: "How it works",
+  s1_h: "NISAR data", s1: "L-band GCOV product, HH and HV, terrain-corrected. Only each fire's window is cut at NASA: a few MB instead of 6 GB per image. Adjacent frames of one pass are mosaicked.",
+  s2_h: "Before / after", s2: "Each pass is first calibrated on the unburned part of the image (this removes rainy days and calibration jumps). For each orbit, ΔHV = median of passes 10 to 120 days after the fire − median of passes in the 75 days before. The drop keeps deepening for weeks, so we look long after. Orbits are averaged.",
+  s3_h: "Scar", s3: "An area counts as burned if it had vegetation (HV > −22 dB) and its smoothed HV drops by more than 1 dB. Only patches connected to the fire are kept (not clear-cuts or harvests elsewhere). The perimeter closes gaps under 200 m, like official figures.",
+  s4_h: "Pulse and checking", s4: "We follow the scar against the control forest, pass by pass. Areas are compared with official figures. Passes covering less than 60% of the zone are flagged.",
+  h_data: "Data used and available",
+  p_data: "All from NASA's catalogue (Earthdata, ASF). Counted on 14 November 2026: re-run 01_search.py for the live figure.",
+  credits: "NASA Space Apps Challenge 2026 project, “Dancing with the SARs” challenge. Open source. Radar: NASA/JPL–ISRO NISAR via ASF DAAC. Basemap: Esri.",
+  sources_h: "Sources for official figures:",
+  skip: "Skip intro", replay: "Replay the launch", sound: "Sound", title_sub: "The pulse of forests, seen from space",
+  orbit_note: "NISAR 747 km up, reconstructed view. It passes over every forest every 12 days.",
+  nav_mission: "Mission", nav_sat: "Satellite",
+  h_mission: "From radar to decision",
+  m1_h: "The problem", m1: "During a big fire, smoke and cloud hide the ground from optical satellites. Official figures come later with a single number: an area. They do not say where the fire hit hardest, or whether the forest is coming back.",
+  m2_h: "NASA data", m2a: "NISAR (NASA–ISRO): L-band radar that sees through smoke, day and night. One pass every 12 days, free data (ASF DAAC).",
+  m2b: "OPERA DIST-ALERT (NASA/JPL): vegetation loss seen by Landsat and Sentinel-2, used to check the radar.", m2c: "Blue Marble (NASA): the Earth on the 3D globe.",
+  m3_h: "The NABD solution", m3: "Five open Python scripts find the passes, download only the fire's window, measure the drop of the radar signal and cross-check it with optical data. The site replays every pass: click a point and read its story.",
+  m4_h: "Who it is for", m4a: "Forest services and civil protection: the scar and its severity, without waiting for a clear sky.",
+  m4b: "Towns and reforestation groups: where to replant, and how regrowth is going.", m4c: "Researchers, students, citizens: documented method, open code and data.",
+  h_sat: "NISAR and its rocket, in 3D", p_sat: "Turn the satellite and its rocket with your mouse or finger: they are the models from the intro.",
+  hg_nisar: "NISAR", hg_gslv: "GSLV-F16", hg_hint: "Drag to turn, scroll or pinch to zoom.", hud_note: "Reconstruction · accelerated time", hg_go: "Show in 3D",
+  hg_sf: "See the detailed model (Sketchfab)", hg_sf_credit: "Detailed model: “NISAR Satellite ISRO - NASA Joint Mission” by MechLab3D, hosted by Sketchfab. It loads only if you click.",
+  f_nisar_h: "NISAR, the satellite", f_mass: "Launch mass", f_ant: "Antenna", f_ant_v: "12 m reflector on a 9 m boom", f_radar: "Radars", f_radar_v: "L-band 24 cm (NASA) and S-band 12 cm (ISRO)",
+  f_orbit: "Orbit", f_orbit_v: "sun-synchronous, 747 km, 98.4°", f_revisit: "Revisit", f_revisit_v: "same place every 12 days",
+  f_gslv_h: "GSLV-F16, NISAR's rocket", f_launch: "Launch", f_launch_v: "30 July 2025, 17:40 India time, Sriharikota", f_height: "Height", f_liftoff: "Lift-off mass",
+  f_stages: "Stages", f_stages_v: "S139 solid + 4 L40 liquid strap-ons, liquid stage, cryogenic stage", f_fair: "Fairing", f_fair_v: "4 m diameter ogive",
+  f_gslv_note: "First GSLV flight to a sun-synchronous orbit. NABD 3D model, built by hand from the configuration published by ISRO."
+};
+const FR = {};
+document.querySelectorAll("[data-i18n]").forEach(el => { FR[el.dataset.i18n] = el.textContent; });
+let lang = "fr";
+try { lang = localStorage.getItem("nabd-lang") || "fr"; } catch (e) {}
+const T = {
+  fr: { radar: "Radar du passage", severity: "Sévérité", dhv: "Chute du signal (ΔHV)", progression: "Progression", swipe: "Avant / après",
+        before: "avant", during: "pendant le feu", after: "après", partial: "passage partiel", track: "orbite", asc: "montante", desc: "descendante",
+        frames: "cadre(s)", scar: "Cicatrice − forêt témoin", burned_now: "Déjà « éteint » sur le radar", cover: "Couverture",
+        low: "Faible", moderate: "Modérée", high: "Forte", official: "officiel", radar_w: "radar",
+        contrast: "Cicatrice − forêt témoin (dB)", frac: "Part déjà brûlée (%)", firewin: "Feu actif",
+        dhv_lo: "−8 dB", dhv_hi: "+4 dB", legend_radar: "Rouge = HH, vert = HV (bois), bleu = rapport HH/HV. Forêt : vert-jaune ; brûlé : violet ; eau : noir.",
+        click: "Cliquez sur la carte", outside: "Hors des zones étudiées.", no_data: "Pas de donnée ici.",
+        pt_burn: "le feu est passé ici", others: "autres passages", pt_ok: "forêt intacte", pt_other: "sol nu ou champ",
+        facts_h: n => `Le feu de ${n}`, gcov: "images radar NISAR (GCOV)", gunw: "interférogrammes NISAR", dist: "cartes OPERA de perturbation",
+        product: "Produit", what: "Ce que c'est", ha: "ha", passes: "passages", first: "depuis",
+        edge: "Le feu déborde du cadre analysé : seule la partie à l'intérieur est comptée.",
+        v_burn: d => `Le feu est passé ici${d ? ", vers le " + d : ""}.`, v_ok: "Forêt intacte : le signal ne chute pas.", v_bare: "Peu de végétation ici (sol nu, champ ou eau).",
+        k_before: "Avant le feu", k_low: "Au plus bas", k_now: "Dernier passage", k_rec: "Repousse depuis le creux", k_drop: "Chute maximale",
+        k_note: "Écart au signal de la forêt témoin, en dB. 0 = comme une forêt intacte.", optical: "Optique OPERA (Landsat / Sentinel-2)",
+        opt_agree: "Radar et optique d'accord", opt_ha: "Perte de végétation vue par l'optique", opt_cloud: "Pixels optiques masqués (nuages, fumée)",
+        col_site: "Site", col_gcov: "GCOV", col_val: "GCOV validé", col_gunw: "GUNW", col_dist: "OPERA DIST-HLS", col_first: "1re image", col_tracks: "Orbites" },
+  en: { radar: "Pass radar", severity: "Severity", dhv: "Signal drop (ΔHV)", progression: "Spread", swipe: "Before / after",
+        before: "before", during: "during the fire", after: "after", partial: "partial pass", track: "track", asc: "ascending", desc: "descending",
+        frames: "frame(s)", scar: "Scar − control forest", burned_now: "Already 'off' on radar", cover: "Coverage",
+        low: "Low", moderate: "Moderate", high: "High", official: "official", radar_w: "radar",
+        contrast: "Scar − control forest (dB)", frac: "Share already burned (%)", firewin: "Active fire",
+        dhv_lo: "−8 dB", dhv_hi: "+4 dB", legend_radar: "Red = HH, green = HV (wood), blue = HH/HV ratio. Forest: green-yellow; burned: purple; water: black.",
+        click: "Click the map", outside: "Outside the study zones.", no_data: "No data here.",
+        pt_burn: "the fire passed here", others: "other passes", pt_ok: "intact forest", pt_other: "bare soil or field",
+        facts_h: n => `The ${n} fire`, gcov: "NISAR radar images (GCOV)", gunw: "NISAR interferograms", dist: "OPERA disturbance maps",
+        product: "Product", what: "What it is", ha: "ha", passes: "passes", first: "since",
+        edge: "The fire spills over the edge of the analysed frame: only the part inside is counted.",
+        v_burn: d => `The fire passed here${d ? ", around " + d : ""}.`, v_ok: "Intact forest: the signal does not drop.", v_bare: "Little vegetation here (bare soil, field or water).",
+        k_before: "Before the fire", k_low: "Lowest", k_now: "Latest pass", k_rec: "Recovery since the low", k_drop: "Largest drop",
+        k_note: "Difference from the control forest signal, in dB. 0 = like an intact forest.", optical: "OPERA optical (Landsat / Sentinel-2)",
+        opt_agree: "Radar and optical agree", opt_ha: "Vegetation loss seen by optical", opt_cloud: "Optical pixels masked (cloud, smoke)",
+        col_site: "Site", col_gcov: "GCOV", col_val: "GCOV validated", col_gunw: "GUNW", col_dist: "OPERA DIST-HLS", col_first: "First image", col_tracks: "Tracks" }
+};
+const t = () => T[lang];
+const loc = () => lang === "fr" ? "fr-FR" : "en-GB";
+const fmtDate = iso => new Date(iso + "T12:00:00Z").toLocaleDateString(loc(), { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+const nf = (v, d = 0) => v == null || !isFinite(v) ? "–" : v.toLocaleString(loc(), { minimumFractionDigits: d, maximumFractionDigits: d });
+const shortName = z => z.name.split("–")[0].trim();
+
+// ---------------------------------------------------------------- map
+const map = L.map("map", { zoomSnap: 0.25, preferCanvas: true, scrollWheelZoom: false });
+// the wheel scrolls the page; it zooms the map only after a click inside it
+map.on("click", () => map.scrollWheelZoom.enable());
+map.getContainer().addEventListener("mouseleave", () => map.scrollWheelZoom.disable());
+const base = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+  { maxZoom: 17, attribution: "Imagery © Esri" }).addTo(map);
+let tOk = 0, tErr = 0;
+base.on("tileload", () => tOk++);
+base.on("tileerror", () => { if (++tErr > 6 && tOk === 0) map.removeLayer(base); });
+
+const LY = {};      // per zone overlays
+for (const k of ORDER) {
+  const z = D.zones[k], last = z.acquisitions.length - 1, ov = (u, o = 1) => L.imageOverlay(u, z.bounds, { opacity: o, interactive: false });
+  LY[k] = { radar: ov(z.acquisitions[last].radar), severity: ov(z.layers.severity), dhv: ov(z.layers.dhv, .9),
+            progression: ov(z.layers.progression), before: ov(z.layers.before), after: ov(z.layers.after) };
+  if (z.dist && z.dist.layer) LY[k].optical = ov(z.dist.layer, .85);
+  L.rectangle(z.bounds, { color: "#f97316", weight: 1, dashArray: "4 4", fill: false, interactive: false }).addTo(map);
+  L.circleMarker(z.ignition, { radius: 5, color: "#fff", weight: 2, fillColor: "#f97316", fillOpacity: 1 })
+    .bindTooltip(z.name, { className: "tip", direction: "top" }).addTo(map);
+}
+// radar images are fetched only around the pass on screen (and ahead of it while playing)
+const warm = new Map();
+function prefetch(k, i, ahead = 2) {
+  const acq = D.zones[k].acquisitions;
+  for (let j = i - 1; j <= i + ahead; j++) { const a = acq[j]; if (!a || warm.has(a.radar)) continue;
+    const im = new Image(); im.decoding = "async"; im.src = a.radar; warm.set(a.radar, im); }
+  if (warm.size > 40) for (const key of [...warm.keys()].slice(0, warm.size - 40)) warm.delete(key);
+}
+
+const state = { zone: ORDER[0], idx: {}, on: { radar: true, severity: true, dhv: false, progression: false, optical: false, swipe: false } };
+ORDER.forEach(k => {
+  const acq = D.zones[k].acquisitions; let i = acq.length - 1;
+  while (i > 0 && acq[i].partial) i--; state.idx[k] = i;
+});
+const Z = () => D.zones[state.zone];
+
+function syncLayers() {
+  for (const k of ORDER) {
+    const active = k === state.zone, sw = state.on.swipe && active;
+    const want = {
+      radar: !sw && state.on.radar, severity: !sw && state.on.severity, dhv: !sw && state.on.dhv,
+      progression: !sw && state.on.progression, optical: !sw && state.on.optical, before: sw, after: sw
+    };
+    if (!active) { want.radar = state.on.radar; want.severity = state.on.severity; want.dhv = false; want.progression = false; want.optical = false; }
+    for (const [name, lyr] of Object.entries(LY[k])) {
+      if (want[name] && !map.hasLayer(lyr)) lyr.addTo(map);
+      if (!want[name] && map.hasLayer(lyr)) map.removeLayer(lyr);
+    }
+    ["radar", "before", "after", "dhv", "progression", "optical", "severity"].forEach(n => { if (LY[k][n] && map.hasLayer(LY[k][n])) LY[k][n].bringToFront(); });
+  }
+  document.getElementById("swipe").style.display = state.on.swipe ? "block" : "none";
+  document.getElementById("swipe-labels").style.display = state.on.swipe ? "flex" : "none";
+  updateSwipe();
+}
+
+// before/after swipe ---------------------------------------------------------------
+let swipeX = null;
+const swipeEl = document.getElementById("swipe");
+function updateSwipe() {
+  const mapEl = document.getElementById("map"), W = mapEl.clientWidth;
+  if (swipeX == null) swipeX = W / 2;
+  swipeX = Math.max(10, Math.min(W - 10, swipeX));
+  swipeEl.style.left = swipeX + "px";
+  const lyr = LY[state.zone] && LY[state.zone].after, el = lyr && lyr.getElement && lyr.getElement();
+  if (!el) return;
+  if (!state.on.swipe) { el.style.clipPath = ""; return; }
+  const r = el.getBoundingClientRect(), m = mapEl.getBoundingClientRect();
+  const cut = Math.max(0, swipeX - (r.left - m.left));
+  el.style.clipPath = `inset(0 0 0 ${cut}px)`;
+}
+map.on("move zoom zoomend moveend", updateSwipe);
+(() => {
+  let drag = false;
+  const handle = swipeEl.querySelector("span");
+  const move = x => { const m = document.getElementById("map").getBoundingClientRect(); swipeX = x - m.left; updateSwipe(); };
+  handle.addEventListener("pointerdown", e => { drag = true; handle.setPointerCapture(e.pointerId); map.dragging.disable(); });
+  handle.addEventListener("pointermove", e => { if (drag) move(e.clientX); });
+  handle.addEventListener("pointerup", () => { drag = false; map.dragging.enable(); });
+})();
+
+// ---------------------------------------------------------------- rail
+const LAYERS = ["radar", "severity", "dhv", "progression", "optical", "swipe"];
+function renderToggles() {
+  const box = document.getElementById("toggles"); box.innerHTML = "";
+  for (const name of LAYERS) {
+    if (name === "optical" && !LY[state.zone].optical) continue;
+    const lab = document.createElement("label");
+    lab.innerHTML = `<span>${t()[name]}</span><input type="checkbox" role="switch" id="tg-${name}" ${state.on[name] ? "checked" : ""}><i aria-hidden="true"></i>`;
+    lab.querySelector("input").addEventListener("change", e => { state.on[name] = e.target.checked; syncLayers(); renderLegend(); });
+    box.appendChild(lab);
+  }
+}
+function renderLegend() {
+  const S = t(), z = Z(); let h = "";
+  if (state.on.severity && !state.on.swipe) h += `<div><span class="sw" style="background:#fde047"></span>${S.low}</div><div><span class="sw" style="background:#f97316"></span>${S.moderate}</div><div><span class="sw" style="background:#be123c"></span>${S.high}</div>`;
+  if (state.on.dhv && !state.on.swipe) h += `<div>${S.dhv_lo}<span class="ramp" style="background:linear-gradient(90deg,#7f1d1d,#ea580c,#fde68a,#f1f5f9,#38bdf8)"></span>${S.dhv_hi}</div>`;
+  if (state.on.progression && !state.on.swipe) z.progression.forEach(p => { h += `<div><span class="sw" style="background:${p.color}"></span>${p.date ? fmtDate(p.date) : S.others} · ${nf(p.ha)} ha</div>`; });
+  if (state.on.optical && !state.on.swipe && z.dist) h += `<div><span class="sw" style="background:#22d3ee"></span>${S.opt_agree}</div><div><span class="sw" style="background:#e879f9"></span>${S.optical}</div>`;
+  if (state.on.radar || state.on.swipe) h += `<div class="muted">${S.legend_radar}</div>`;
+  document.getElementById("legend").innerHTML = h;
+}
+
+const slider = document.getElementById("slider");
+function setIndex(i) {
+  const z = Z(), S = t();
+  i = Math.max(0, Math.min(z.acquisitions.length - 1, i));
+  state.idx[state.zone] = i; slider.max = z.acquisitions.length - 1; slider.value = i;
+  const a = z.acquisitions[i];
+  LY[state.zone].radar.setUrl(a.radar); prefetch(state.zone, i, timer ? 4 : 2);
+  document.getElementById("date").textContent = fmtDate(a.date);
+  const ph = document.getElementById("phase");
+  ph.textContent = a.partial ? `${S.partial} · ${Math.round(a.coverage * 100)} %` : S[a.phase];
+  ph.className = "chip " + (a.partial ? "" : a.phase);
+  document.getElementById("pass").textContent = `${S.track} ${a.track} · ${a.direction === "ascending" ? S.asc : S.desc} · ${a.granules.length} ${S.frames} · ${a.time_utc} UTC`;
+  let s = "";
+  s += `<div class="stat"><span>${S.scar}</span><b>${a.contrast == null ? "–" : (a.contrast > 0 ? "+" : "") + nf(a.contrast, 1) + " dB"}</b></div>`;
+  s += `<div class="stat"><span>${S.burned_now}</span><b>${a.burned_frac == null ? "–" : nf(a.burned_frac * 100) + " %"}</b></div>`;
+  s += `<div class="stat"><span>${S.cover}</span><b>${nf(a.coverage * 100)} %</b></div>`;
+  document.getElementById("stats").innerHTML = s;
+  highlight();
+}
+slider.addEventListener("input", e => setIndex(+e.target.value));
+let timer = null;
+const playBtn = document.getElementById("play");
+const stopPlay = () => { clearInterval(timer); timer = null; playBtn.textContent = "▶"; };
+playBtn.addEventListener("click", () => {
+  if (timer) return stopPlay();
+  playBtn.textContent = "❚❚";
+  if (+slider.value >= +slider.max) setIndex(0);
+  timer = setInterval(() => { const i = +slider.value + 1; if (i > +slider.max) return stopPlay(); setIndex(i); }, 650);
+});
+
+function setZone(k, fit = true) {
+  stopPlay(); state.zone = k;
+  document.querySelectorAll(".site").forEach(b => b.setAttribute("aria-pressed", b.dataset.zone === k));
+  if (fit) map.fitBounds(D.zones[k].focus || D.zones[k].bounds, { padding: [8, 8] });
+  syncLayers(); renderToggles(); renderLegend(); setIndex(state.idx[k]); renderZonePanels(); buildPulse(); renderKpis(); renderOptical();
+  if (fit) worstPoint(D.zones[k]).then(wp => { if (wp && state.zone === k) inspect(k, wp, true); }).catch(() => {});
+}
+
+// ---------------------------------------------------------------- sound
+let ac = null, playing = [];
+const HIJAZ = [0, 1, 4, 5, 7, 8, 10];
+function audio() { if (!ac) { const A = window.AudioContext || window.webkitAudioContext; if (A) ac = new A(); } if (ac && ac.state === "suspended") ac.resume(); return ac; }
+function stopSound() { playing.forEach(n => { try { n.stop(); } catch (e) {} }); playing = []; }
+const noteFreq = st => { const o = Math.floor(st / 7), dg = ((st % 7) + 7) % 7; return 130.81 * Math.pow(2, o + HIJAZ[dg] / 12); };
+function tone(f, at, dur, type, gain) {
+  const o = ac.createOscillator(), g = ac.createGain(); o.type = type; o.frequency.value = f;
+  g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(gain, at + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+  o.connect(g).connect(ac.destination); o.start(at); o.stop(at + dur + 0.05); playing.push(o);
+}
+function drum(at, low) {
+  const o = ac.createOscillator(), g = ac.createGain();
+  o.frequency.setValueAtTime(low ? 110 : 420, at); o.frequency.exponentialRampToValueAtTime(low ? 45 : 200, at + 0.15);
+  g.gain.setValueAtTime(low ? 0.45 : 0.15, at); g.gain.exponentialRampToValueAtTime(0.0001, at + (low ? 0.3 : 0.08));
+  o.connect(g).connect(ac.destination); o.start(at); o.stop(at + 0.35); playing.push(o);
+}
+function crackle(at) {
+  const len = Math.floor(ac.sampleRate * 0.6), buf = ac.createBuffer(1, len, ac.sampleRate), ch = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) ch[i] = (Math.random() < 0.02 ? (Math.random() * 2 - 1) : (Math.random() * 2 - 1) * 0.15) * (1 - i / len);
+  const src = ac.createBufferSource(), g = ac.createGain(); src.buffer = buf; g.gain.value = 0.5;
+  src.connect(g).connect(ac.destination); src.start(at); playing.push(src);
+}
+function playSeries(vals, fireIdx) {
+  if (!audio()) return; stopSound();
+  const step = 0.26, t0 = ac.currentTime + 0.05;
+  vals.forEach((v, i) => {
+    const at = t0 + i * step; drum(at, i % 2 === 0);
+    if (i === fireIdx) crackle(at);
+    if (v != null) tone(noteFreq(Math.round(v * 14)), at, 0.3, "triangle", 0.2);
+  });
+}
+const spark = document.getElementById("spark"), sctx = spark.getContext("2d");
+function drawSpark(vals, label, color, fireIdx) {
+  const w = spark.width, h = spark.height; sctx.clearRect(0, 0, w, h);
+  sctx.strokeStyle = "rgba(154,160,173,.18)"; sctx.lineWidth = 1;
+  for (let k = 1; k < 4; k++) { sctx.beginPath(); sctx.moveTo(0, h * k / 4); sctx.lineTo(w, h * k / 4); sctx.stroke(); }
+  const X = i => 12 + i * (w - 24) / Math.max(1, vals.length - 1);
+  if (fireIdx != null && fireIdx >= 0) { sctx.fillStyle = "rgba(249,115,22,.25)"; sctx.fillRect(X(fireIdx) - 8, 34, 16, h - 40); }
+  const pts = vals.map((v, i) => v == null ? null : [X(i), h - 12 - v * (h - 48)]);
+  sctx.beginPath(); let on = false;
+  pts.forEach(p => { if (!p) { on = false; return; } on ? sctx.lineTo(...p) : sctx.moveTo(...p); on = true; });
+  sctx.strokeStyle = color; sctx.lineWidth = 3; sctx.stroke();
+  pts.forEach((p, i) => { if (!p) return; sctx.beginPath(); sctx.arc(p[0], p[1], i === state.idx[state.zone] ? 6 : 3.5, 0, 7); sctx.fillStyle = color; sctx.fill(); });
+  if (label) { sctx.fillStyle = "#eef0f6"; sctx.font = "600 22px Archivo, sans-serif"; sctx.fillText(label, 12, 26); }
+}
+// per-pixel radar history: a small binary file per fire, fetched the first time it is needed
+function cubeBytes(z) {
+  const c = z.cube; if (c._b) return Promise.resolve(c._b);
+  if (c.b64) { const s = atob(c.b64); c._b = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) c._b[i] = s.charCodeAt(i); return Promise.resolve(c._b); }
+  return c._p || (c._p = fetch(c.src).then(r => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); }).then(a => (c._b = new Uint8Array(a))));
+}
+const inZone = (z, ll) => { const [[s, w], [n, e]] = z.bounds; return ll.lat >= s && ll.lat <= n && ll.lng >= w && ll.lng <= e; };
+function seriesAt(z, ll, b) {
+  const [[s, w], [n, e]] = z.bounds, c = z.cube;
+  if (!inZone(z, ll)) return null;
+  const col = Math.min(c.w - 1, Math.floor((ll.lng - w) / (e - w) * c.w)), row = Math.min(c.h - 1, Math.floor((n - ll.lat) / (n - s) * c.h));
+  const out = [];
+  for (let k = 0; k < c.t; k++) { const q = b[k * c.w * c.h + row * c.w + col]; out.push(q === 255 ? null : c.lo + q / 254 * (c.hi - c.lo)); }
+  return out;
+}
+const firstAfter = z => z.acquisitions.findIndex(a => a.phase !== "before");
+const sgn = v => (v > 0 ? "+" : "") + nf(v, 1) + " dB";
+let marker = null, lastSeries = null;
+async function inspect(k, ll, quiet) {
+  const S = t(), z = D.zones[k];
+  const out = (msg) => { document.getElementById("insp-verdict").textContent = msg; document.getElementById("insp-stats").innerHTML = ""; drawSpark([], "", "#a3a8ba"); lastSeries = null; };
+  if (!inZone(z, ll)) return out(S.outside);
+  let b; try { b = await cubeBytes(z); } catch (e) { return out(S.no_data); }
+  const ser = seriesAt(z, ll, b);
+  if (!ser) return out(S.outside);
+  if (!ser.some(v => v != null)) return out(S.no_data);
+  const fi = firstAfter(z), acq = z.acquisitions, mean = a => a.reduce((x, y) => x + y, 0) / Math.max(1, a.length);
+  const preV = ser.slice(0, fi).filter(v => v != null), postI = ser.map((v, i) => i >= fi && v != null ? i : -1).filter(i => i >= 0);
+  const pre = mean(preV), lowI = postI.reduce((b, i) => ser[i] < ser[b] ? i : b, postI[0] ?? fi), low = ser[lowI] ?? pre;
+  const lastI = postI.length ? postI[postI.length - 1] : fi, now = ser[lastI] ?? pre, drop = low - pre;
+  const burnI = postI.find(i => ser[i] < pre - 1.2);
+  const burned = drop < -1.5, bare = pre < -3.5 && !burned;
+  document.getElementById("insp-verdict").textContent = burned ? S.v_burn(burnI != null ? fmtDate(acq[burnI].date) : "") : bare ? S.v_bare : S.v_ok;
+  document.getElementById("insp-verdict").className = "verdict " + (burned ? "burn" : bare ? "bare" : "ok");
+  const kv = (l, v, cls = "") => `<div class="kv ${cls}"><span>${l}</span><b>${v}</b></div>`;
+  document.getElementById("insp-stats").innerHTML = kv(S.k_before, sgn(pre)) + kv(S.k_low, sgn(low), burned ? "burn" : "") + kv(S.k_now, sgn(now)) +
+    (burned ? kv(S.k_rec, sgn(now - low), now - low > 0.5 ? "up" : "") : "");
+  const norm = ser.map(v => v == null ? null : Math.max(0, Math.min(1, (v + 10) / 14)));
+  lastSeries = { norm, fi: burned ? fi : -1 };
+  drawSpark(norm, "", burned ? "#fb923c" : bare ? "#cbd5e1" : "#a3e635", fi);
+  if (marker) map.removeLayer(marker);
+  marker = L.circleMarker(ll, { radius: 8, color: "#fff", weight: 2, fillColor: burned ? "#fb923c" : "#a3e635", fillOpacity: .9 }).addTo(map);
+  if (!quiet) document.getElementById("inspect").scrollIntoView({ block: "nearest", behavior: "smooth" });
+}
+// on opening a site, inspect its most damaged point so the panel is never empty
+async function worstPoint(z) {
+  const c = z.cube, b = await cubeBytes(z), fi = firstAfter(z), [[s, w], [n, e]] = z.bounds; let best = null, bv = 0;
+  for (let r = 0; r < c.h; r += 2) for (let q = 0; q < c.w; q += 2) {
+    let a = 0, na = 0, p = 0, np = 0;
+    for (let k = 0; k < c.t; k++) { const v = b[k * c.w * c.h + r * c.w + q]; if (v === 255) continue; if (k < fi) { a += v; na++; } else { p += v; np++; } }
+    if (na && np) { const d = p / np - a / na; if (d < bv) { bv = d; best = [r, q]; } }
+  }
+  if (!best) return null;
+  return L.latLng(n - (best[0] + 0.5) / c.h * (n - s), w + (best[1] + 0.5) / c.w * (e - w));
+}
+map.on("click", ev => {
+  const k = ORDER.find(q => inZone(D.zones[q], ev.latlng));
+  if (!k) return inspect(state.zone, ev.latlng);
+  if (k !== state.zone) setZone(k, false);
+  inspect(k, ev.latlng);
+});
+document.getElementById("listen-pt").addEventListener("click", () => { if (lastSeries) playSeries(lastSeries.norm, lastSeries.fi); });
+document.getElementById("listen-stop").addEventListener("click", stopSound);
+
+// ---------------------------------------------------------------- charts
+Chart.defaults.animation = false; Chart.defaults.color = "#a9a5c8"; Chart.defaults.font.family = "Archivo, sans-serif"; Chart.defaults.borderColor = "rgba(168,156,255,.12)";
+let chPulse = null;
+const fireBand = {
+  id: "fireBand",
+  beforeDatasetsDraw(c, args, o) {
+    const { ctx, chartArea: a, scales: { x } } = c, x0 = x.getPixelForValue(o.from), x1 = x.getPixelForValue(o.to);
+    ctx.save(); ctx.fillStyle = "rgba(249,115,22,.16)"; ctx.fillRect(x0, a.top, Math.max(3, x1 - x0), a.bottom - a.top);
+    ctx.fillStyle = "#fdba74"; ctx.font = "600 12px Archivo"; ctx.fillText(o.label, Math.min(x0 + 4, a.right - 80), a.top + 14); ctx.restore();
+  }
+};
+const trackColors = ["#f97316", "#38bdf8", "#e879f9", "#a3e635"];
+function buildPulse() {
+  if (chPulse) chPulse.destroy();
+  const z = Z(), S = t(), tracks = [...new Set(z.acquisitions.map(a => a.track))];
+  const ds = tracks.map((tr, j) => ({
+    type: "line", label: `${S.track} ${tr}`, yAxisID: "y", showLine: true, tension: 0.25, borderWidth: 2,
+    borderColor: trackColors[j % 4], backgroundColor: trackColors[j % 4], pointRadius: 4,
+    data: z.acquisitions.filter(a => a.track === tr && !a.partial && a.contrast != null).map(a => ({ x: Date.parse(a.date), y: a.contrast, key: a.key }))
+  }));
+  ds.push({ type: "bar", label: S.frac, yAxisID: "y2", backgroundColor: "rgba(203,213,225,.18)", borderWidth: 0, barThickness: 6,
+    data: z.acquisitions.filter(a => a.burned_frac != null && !a.partial).map(a => ({ x: Date.parse(a.date), y: a.burned_frac * 100 })) });
+  const xs = z.acquisitions.map(a => Date.parse(a.date));
+  chPulse = new Chart(document.getElementById("chart-pulse"), {
+    data: { datasets: ds }, plugins: [fireBand],
+    options: { maintainAspectRatio: false, animation: false, interaction: { mode: "nearest", intersect: false },
+      scales: {
+        x: { type: "linear", min: Math.min(...xs) - 6 * 864e5, max: Math.max(...xs) + 6 * 864e5,
+             ticks: { callback: v => new Date(v).toLocaleDateString(loc(), { day: "numeric", month: "short", timeZone: "UTC" }), maxTicksLimit: 10 } },
+        y: { title: { display: true, text: S.contrast }, suggestedMin: -8, suggestedMax: 1 },
+        y2: { position: "right", min: 0, max: 100, grid: { drawOnChartArea: false }, title: { display: true, text: S.frac } } },
+      plugins: { fireBand: { from: Date.parse(z.fire_start), to: Date.parse(z.fire_end), label: S.firewin },
+        legend: { labels: { usePointStyle: true } },
+        tooltip: { callbacks: { title: it => fmtDate(new Date(it[0].parsed.x).toISOString().slice(0, 10)),
+          label: it => it.dataset.yAxisID === "y2" ? ` ${nf(it.parsed.y)} %` : ` ${nf(it.parsed.y, 1)} dB` } } } }
+  });
+  highlight();
+}
+function highlight() {
+  if (!chPulse) return;
+  const cur = Z().acquisitions[state.idx[state.zone]];
+  chPulse.data.datasets.forEach(d => { if (d.type === "line") d.pointRadius = d.data.map(p => p.key === cur.key ? 9 : 4); });
+  chPulse.update("none");
+}
+
+// ---------------------------------------------------------------- panels
+function renderSites() {
+  const S = t();
+  document.getElementById("sites").innerHTML = ORDER.map(k => {
+    const z = D.zones[k], pct = z.burn.area_ha / z.official_ha * 100;
+    const flag = { ES: "ESPAÑA", FR: "FRANCE", MA: "المغرب · MAROC" }[z.country];
+    return `<button class="site" data-zone="${k}" aria-pressed="${k === state.zone}">
+      <span class="flag">${flag}</span><span class="nm">${shortName(z)}</span>
+      <span class="big">${nf(z.burn.area_ha)} <small>ha ${S.radar_w}</small></span>
+      <span class="vs">${nf(z.official_ha)} ha ${S.official} · ${nf(pct)} %</span>
+      <span class="meter"><i style="width:${Math.min(100, pct)}%"></i></span></button>`;
+  }).join("");
+  document.querySelectorAll(".site").forEach(b => b.addEventListener("click", () => setZone(b.dataset.zone)));
+}
+function renderInventory() {
+  const S = t(), Zs = D.inventory.zones, sum = f => Object.values(Zs).reduce((s, z) => s + (z[f] || 0), 0);
+  document.getElementById("inventory").innerHTML =
+    `<div><b>${nf(sum("gcov_provisional") + sum("gcov_validated"))}</b>${S.gcov}</div>` +
+    `<div><b>${nf(sum("gunw"))}</b>${S.gunw}</div>` +
+    `<div><b>${nf(sum("opera_dist_hls"))}</b>${S.dist}</div>`;
+  const rows = ORDER.map(k => { const v = Zs[k] || {}; return `<tr><td>${shortName(D.zones[k])}</td><td class="n">${v.gcov_provisional ?? "–"}</td><td class="n">${v.gcov_validated ?? "–"}</td><td class="n">${v.gunw ?? "–"}</td><td class="n">${v.opera_dist_hls ?? "–"}</td><td class="n">${v.first ? fmtDate(v.first) : "–"}</td><td>${(v.tracks || []).join(", ")}</td></tr>`; }).join("");
+  document.getElementById("data-table").innerHTML = `<thead><tr><th>${S.col_site}</th><th>${S.col_gcov}</th><th>${S.col_val}</th><th>${S.col_gunw}</th><th>${S.col_dist}</th><th>${S.col_first}</th><th>${S.col_tracks}</th></tr></thead><tbody>${rows}</tbody>`;
+}
+function renderCompare() {
+  const S = t();
+  document.getElementById("area-bars").innerHTML = ORDER.map(k => {
+    const z = D.zones[k], pct = z.burn.area_ha / z.official_ha * 100;
+    const cut = z.burn.touches_edge ? ` <small title="${S.edge}">↗</small>` : "";
+    return `<div class="bar"><span>${shortName(z)}${cut}</span><div class="track"><i style="width:${Math.min(100, pct)}%;background:var(--pulse)"></i></div><span class="v">${nf(pct)} %</span></div>`;
+  }).join("");
+  document.getElementById("sev-bars").innerHTML = ORDER.map(k => {
+    const z = D.zones[k], b = z.burn.by_severity_ha, tot = Math.max(1, b.low + b.moderate + b.high);
+    return `<div class="bar"><span>${shortName(z)}</span><div class="track"><i style="width:${b.low / tot * 100}%;background:#fde047"></i><i style="width:${b.moderate / tot * 100}%;background:#f97316"></i><i style="width:${b.high / tot * 100}%;background:#be123c"></i></div><span class="v">${nf(b.high / tot * 100)} % ${S.high.toLowerCase()}</span></div>`;
+  }).join("");
+}
+function renderKpis() {
+  const z = Z(), S = t(), fi = firstAfter(z), A = z.acquisitions.map((a, i) => ({ i, v: a.partial ? null : a.contrast })).filter(o => o.v != null);
+  const pre = A.filter(o => o.i < fi).map(o => o.v), post = A.filter(o => o.i >= fi);
+  if (!pre.length || !post.length) { document.getElementById("pulse-kpis").innerHTML = ""; return; }
+  const m = pre.reduce((x, y) => x + y, 0) / pre.length, low = post.reduce((b, o) => o.v < b.v ? o : b, post[0]), last = post[post.length - 1];
+  const k = (l, v, sub, cls = "") => `<div class="kpi ${cls}"><span>${l}</span><b>${v}</b><small>${sub}</small></div>`;
+  document.getElementById("pulse-kpis").innerHTML =
+    k(S.k_drop, sgn(low.v - m), fmtDate(z.acquisitions[low.i].date), "burn") +
+    k(S.k_now, sgn(last.v - m), fmtDate(z.acquisitions[last.i].date)) +
+    k(S.k_rec, sgn(last.v - low.v), S.k_note, last.v - low.v > 0.5 ? "up" : "");
+}
+function renderOptical() {
+  const card = document.getElementById("optical-card"), have = ORDER.filter(k => D.zones[k].dist);
+  card.hidden = !have.length; if (!have.length) return;
+  const S = t();
+  document.getElementById("opt-bars").innerHTML = have.map(k => { const d = D.zones[k].dist;
+    return `<div class="bar"><span>${shortName(D.zones[k])}</span><div class="track"><i style="width:${Math.min(100, d.agree_pct)}%;background:linear-gradient(90deg,#22d3ee,#e879f9)"></i></div><span class="v">${nf(d.agree_pct)} %</span></div>`; }).join("") +
+    `<p class="hint">${S.opt_agree} · ${S.opt_ha} : ${have.map(k => shortName(D.zones[k]) + " " + nf(D.zones[k].dist.optical_ha) + " ha").join(", ")}</p>`;
+}
+function renderZonePanels() {
+  const S = t(), z = Z(), f = D.facts[state.zone] || {};
+  document.getElementById("facts-h").textContent = S.facts_h(shortName(z));
+  document.getElementById("facts").innerHTML = (lang === "fr" ? f.facts_fr : f.facts_en || []).map(x => `<li>${x}</li>`).join("");
+  const mx = Math.max(1, ...z.progression.map(p => p.ha));
+  document.getElementById("prog-bars").innerHTML = z.progression.map(p =>
+    `<div class="bar"><span>${p.date ? fmtDate(p.date) + " · " + S.track + " " + p.track : S.others}</span><div class="track"><i style="width:${p.ha / mx * 100}%;background:${p.color}"></i></div><span class="v">${nf(p.ha)} ha</span></div>`).join("");
+}
+function renderFooter() {
+  const all = [...ORDER.flatMap(k => (D.facts[k] || {}).sources || []), ...(D.facts.context.sources || [])];
+  const seen = new Set();
+  document.getElementById("sources").innerHTML = all.filter(([n, u]) => !seen.has(u) && seen.add(u)).map(([n, u]) => `<li><a href="${u}" target="_blank" rel="noopener">${n}</a></li>`).join("");
+  document.getElementById("context").textContent = D.facts.context[lang];
+}
+
+function applyLang(l) {
+  lang = l; try { localStorage.setItem("nabd-lang", l); } catch (e) {}
+  document.documentElement.lang = l;
+  document.getElementById("lang-fr").setAttribute("aria-pressed", l === "fr");
+  document.getElementById("lang-en").setAttribute("aria-pressed", l === "en");
+  const dict = l === "en" ? EN : FR;
+  document.querySelectorAll("[data-i18n]").forEach(el => { if (dict[el.dataset.i18n]) el.textContent = dict[el.dataset.i18n]; });
+  renderSites(); renderInventory(); renderCompare(); renderZonePanels(); renderFooter();
+  renderToggles(); renderLegend(); buildPulse(); setIndex(state.idx[state.zone]); renderKpis(); renderOptical();
+  const k0 = state.zone; worstPoint(Z()).then(wp => { if (wp && state.zone === k0) inspect(k0, marker ? marker.getLatLng() : wp, true); }).catch(() => {});
+}
+document.getElementById("lang-fr").addEventListener("click", () => applyLang("fr"));
+document.getElementById("lang-en").addEventListener("click", () => applyLang("en"));
+
+// ---------------------------------------------------------------- start
+document.getElementById("demo-banner").hidden = !D.demo;
+map.fitBounds(D.zones[state.zone].focus || D.zones[state.zone].bounds, { padding: [8, 8] });
+syncLayers();
+applyLang(lang);
+})();
+</script>
+<script type="module">
+import { createIntro, buildRocket, buildNisar, rng } from "./intro/intro.js?v=15";
+{ // 3D hangar: nothing 3D runs until the visitor asks for it (button or a model tab)
+  const hg = document.getElementById("hangar"); let live = null;
+  const go = model => { if (!live) live = import("./hangar/hangar.js?v=3").then(m => m.mountHangar({ root: hg, lib: { buildRocket, buildNisar, rng }, initial: model })).catch(e => console.warn("hangar", e)); };
+  document.getElementById("hg-go").addEventListener("click", () => go("nisar"));
+  hg.querySelectorAll("[data-model]").forEach(b => b.addEventListener("click", () => go(b.dataset.model)));
+}
+const body = document.body, mode = document.documentElement.dataset.launch;
+const cap = document.getElementById("launch-cap"), canvas = document.getElementById("space");
+let intro = null;
+function reveal() {
+  if (!body.classList.contains("launching")) return;
+  body.classList.remove("launching");
+  try { localStorage.setItem("nabd-launch-seen", "1"); } catch (e) {}
+  setTimeout(() => window.dispatchEvent(new Event("resize")), 60);
+}
+const lang = () => document.documentElement.lang === "en" ? "en" : "fr";
+function title() { body.classList.remove("titling"); void body.offsetWidth; body.classList.add("titling"); }
+
+// ---- launch sound design, synthesised in the browser (no audio file), each sound timed to its event on screen
+let audio = null;
+function startSound() {
+  const AC = window.AudioContext || window.webkitAudioContext; if (!AC || !intro) return;
+  const ctx = new AC(), out = ctx.createDynamicsCompressor(), master = ctx.createGain(); master.gain.value = 0.85;
+  out.threshold.value = -16; out.ratio.value = 4; master.connect(out).connect(ctx.destination);
+  const sr = ctx.sampleRate, now = () => ctx.currentTime;
+  const noise = (sec, brown) => { const b = ctx.createBuffer(2, sr * sec, sr); for (let c = 0; c < 2; c++) { const d = b.getChannelData(c); let x = 0;
+    for (let i = 0; i < d.length; i++) { const w = Math.random() * 2 - 1; x = brown ? (x + 0.02 * w) / 1.02 : w; d[i] = brown ? x * 3.4 : w; } } return b; };
+  const brownBuf = noise(4, true), whiteBuf = noise(2, false);
+  const crackBuf = (() => { const b = ctx.createBuffer(2, sr * 3, sr); for (let c = 0; c < 2; c++) { const d = b.getChannelData(c);
+    for (let i = 0; i < d.length; i++) if (Math.random() < 0.0016) { const a = (Math.random() * 0.8 + 0.2) * (Math.random() < 0.5 ? -1 : 1); for (let k = 0; k < 90 && i + k < d.length; k++) d[i + k] += a * Math.exp(-k / 14) * (Math.random() * 2 - 1); } } return b; })();
+  const src = (buf, loop) => { const s = ctx.createBufferSource(); s.buffer = buf; s.loop = !!loop; return s; };
+  const env = (g, t0, a, peak, d, end = 0.0001) => { g.gain.cancelScheduledValues(t0); g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(peak, t0 + a); g.gain.exponentialRampToValueAtTime(end, t0 + a + d); };
+  // bed: rumble and crackle that follow the engines
+  const rumble = src(brownBuf, true), rLP = ctx.createBiquadFilter(), rG = ctx.createGain(); rLP.type = "lowpass"; rLP.frequency.value = 300; rG.gain.value = 0;
+  rumble.connect(rLP).connect(rG).connect(master); rumble.start();
+  const crackle = src(crackBuf, true), cBP = ctx.createBiquadFilter(), cG = ctx.createGain(); cBP.type = "bandpass"; cBP.frequency.value = 1400; cBP.Q.value = 0.6; cG.gain.value = 0;
+  crackle.connect(cBP).connect(cG).connect(master); crackle.start();
+  // events
+  const thump = (t0, f0 = 60, f1 = 28, len = 0.9, vol = 0.9) => { const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.setValueAtTime(f0, t0); o.frequency.exponentialRampToValueAtTime(f1, t0 + len); env(g, t0, 0.01, vol, len); o.connect(g).connect(master); o.start(t0); o.stop(t0 + len + 0.1); };
+  const burst = (t0, type, f, q, a, peak, d, sweep) => { const s = src(whiteBuf), fl = ctx.createBiquadFilter(), g = ctx.createGain(); fl.type = type; fl.frequency.setValueAtTime(f, t0); fl.Q.value = q;
+    if (sweep) fl.frequency.exponentialRampToValueAtTime(sweep, t0 + a + d); env(g, t0, a, peak, d); s.connect(fl).connect(g).connect(master); s.start(t0); s.stop(t0 + a + d + 0.05); };
+  const clank = (t0, vol = 0.18) => { for (const [f, dt] of [[431, 0], [652, 0.004], [1197, 0.009]]) { const o = ctx.createOscillator(), g = ctx.createGain(); o.type = "triangle"; o.frequency.value = f; env(g, t0 + dt, 0.003, vol, 0.5); o.connect(g).connect(master); o.start(t0 + dt); o.stop(t0 + 0.7); } };
+  const servo = (t0, len) => { const o = ctx.createOscillator(), lfo = ctx.createOscillator(), lg = ctx.createGain(), fl = ctx.createBiquadFilter(), g = ctx.createGain();
+    o.type = "sawtooth"; o.frequency.setValueAtTime(92, t0); o.frequency.linearRampToValueAtTime(128, t0 + len); lfo.frequency.value = 11; lg.gain.value = 7; lfo.connect(lg).connect(o.frequency);
+    fl.type = "lowpass"; fl.frequency.value = 520; g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.06, t0 + 0.15); g.gain.setValueAtTime(0.06, t0 + len - 0.25); g.gain.exponentialRampToValueAtTime(0.0001, t0 + len);
+    o.connect(fl).connect(g).connect(master); o.start(t0); lfo.start(t0); o.stop(t0 + len + 0.05); lfo.stop(t0 + len + 0.05); clank(t0 + len - 0.05, 0.09); };
+  const chord = t0 => { [146.83, 220.0, 329.63, 369.99, 554.37].forEach((f, i) => { const o = ctx.createOscillator(), g = ctx.createGain(); o.type = i < 2 ? "triangle" : "sine"; o.frequency.value = f; o.detune.value = (i % 2 ? 4 : -4);
+    g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.05 / (1 + i * 0.25), t0 + 1.4); g.gain.setValueAtTime(0.05 / (1 + i * 0.25), t0 + 2.6); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 6.5);
+    o.connect(g).connect(master); o.start(t0); o.stop(t0 + 6.6); }); };
+  const T = intro.T;
+  const events = [
+    [T.ign, t0 => { thump(t0, 55, 26, 1.4, 1); burst(t0, "lowpass", 900, 0.5, 0.04, 0.6, 1.2); }],          // ignition
+    [T.lift, t0 => burst(t0, "lowpass", 400, 0.4, 0.5, 0.35, 1.6, 1500)],                                    // lift-off swell
+    [T.cut, t0 => burst(t0, "bandpass", 500, 0.8, 0.08, 0.25, 0.35, 2600)],                                  // cut whoosh
+    [T.shotB, t0 => burst(t0, "bandpass", 700, 0.8, 0.06, 0.3, 0.45, 3200)],
+    [T.space, t0 => { burst(t0 - 0.25, "bandpass", 300, 0.7, 0.24, 0.45, 0.5, 4000); thump(t0, 90, 40, 0.6, 0.35); }],
+    [T.boost, t0 => { burst(t0, "highpass", 900, 0.7, 0.004, 0.5, 0.18); thump(t0, 110, 50, 0.3, 0.4); }],  // pyro: strap-ons
+    [T.core, t0 => { burst(t0, "highpass", 800, 0.7, 0.004, 0.55, 0.2); thump(t0, 95, 45, 0.35, 0.45); clank(t0 + 0.05); }],
+    [T.fair, t0 => { burst(t0, "highpass", 1200, 0.7, 0.003, 0.35, 0.15); clank(t0 + 0.02, 0.12); }],
+    [T.sep, t0 => { burst(t0, "highpass", 1500, 0.9, 0.003, 0.3, 0.12); clank(t0, 0.14); }],                 // NISAR separation
+    [T.deploy, t0 => servo(t0, 1.6)], [T.deploy + 1.7, t0 => servo(t0, 1.2)],                                 // boom, then antenna
+    [T.deployEnd - 0.6, t0 => chord(t0)],
+  ];
+  let last = intro.time(), raf = 0;
+  const tick = () => { raf = requestAnimationFrame(tick); const tt = intro.time(), L = intro.level(), c = now();
+    if (tt < last - 0.2) last = tt - 0.001;                                    // replay
+    for (const [at, fn] of events) if (last < at && tt >= at && tt - at < 0.4) fn(c);
+    last = tt;
+    const ground = tt < T.space ? 1 : 0.18;
+    rG.gain.setTargetAtTime(L * 0.95 * ground + (tt < T.space ? 0 : L * 0.4), c, 0.08); rLP.frequency.setTargetAtTime(140 + L * 820 * ground, c, 0.12);
+    cG.gain.setTargetAtTime(L * 0.55 * ground * (tt > T.shotB ? 0.35 : 1), c, 0.06);
+    if (tt > T.end + 6) master.gain.setTargetAtTime(0.0001, c, 0.6);
+  };
+  tick();
+  audio = { ctx, stop() { cancelAnimationFrame(raf); try { ctx.close(); } catch (e) {} } };
+}
+// ---- webcast overlay: mission clock and phase
+const PH = { fr: ["Compte à rebours", "Décollage", "Séparation des étages", "Étage cryogénique", "NISAR largué, déploiement", "En orbite à 747 km"],
+             en: ["Countdown", "Lift-off", "Staging", "Cryogenic stage", "NISAR released, deploying", "In orbit at 747 km"] };
+function hudLoop() {
+  if (!intro || !intro.telemetry) return;
+  const clk = document.getElementById("hud-clock"), ph = document.getElementById("hud-phase"); let lastS = null, lastP = -1;
+  const step = () => { if (!body.classList.contains("launching")) return; {
+      const { met, phase } = intro.telemetry(), s = Math.round(met), a = Math.abs(s);
+      if (s !== lastS) { lastS = s; clk.textContent = `T${s < 0 ? "−" : "+"}${String(Math.floor(a / 3600)).padStart(2, "0")}:${String(Math.floor(a / 60) % 60).padStart(2, "0")}:${String(a % 60).padStart(2, "0")}`; }
+      const key = phase + lang(); if (key !== lastP) { lastP = key; ph.textContent = PH[lang()][phase]; } }
+    requestAnimationFrame(step); };
+  step();
+}
+try {
+  intro = await createIntro({
+    canvas, lang: lang(), quality: Math.min(innerWidth, innerHeight) < 600 ? 0 : 1,
+    onCaption: c => { cap.style.opacity = 0; setTimeout(() => { cap.textContent = c; cap.style.opacity = 1; }, c ? 180 : 0); },
+    onReveal: reveal,
+    onSlow: () => body.classList.add("lite"),
+  });
+  if (intro.tier === 0) body.classList.add("lite");
+  hudLoop();
+  window.__launchOK = true;
+  if (mode === "still") intro.still();
+  else { intro.start(); if (mode === "orbit") intro.skip(); else title(); }
+} catch (e) {
+  console.warn("3D intro unavailable:", e); canvas.remove(); reveal();
+}
+document.getElementById("launch-skip").addEventListener("click", () => { intro && intro.skip(); reveal(); body.classList.remove("titling"); });
+document.getElementById("launch-sound").addEventListener("click", e => {
+  const on = e.currentTarget.getAttribute("aria-pressed") !== "true"; e.currentTarget.setAttribute("aria-pressed", on);
+  if (on && !audio) startSound(); else if (!on && audio) { audio.stop(); audio = null; }
+});
+addEventListener("keydown", e => { if (e.key === "Escape" && body.classList.contains("launching")) { intro && intro.skip(); reveal(); } });
+document.getElementById("launch-replay").addEventListener("click", () => {
+  if (!intro || mode === "still") return;
+  scrollTo({ top: 0 }); body.classList.add("launching"); intro.setLang(lang()); intro.start(); title(); hudLoop();
+});
+for (const id of ["lang-fr", "lang-en"]) document.getElementById(id).addEventListener("click", () => intro && intro.setLang(lang()));
+// the orbit behind the page answers scroll and the mouse: the camera travels around NISAR as you read
+if (intro && mode !== "still") {
+  const onScroll = () => intro.setScroll(scrollY / Math.max(1, document.documentElement.scrollHeight - innerHeight));
+  addEventListener("scroll", onScroll, { passive: true }); onScroll();
+  addEventListener("pointermove", e => intro.setPointer(e.clientX / innerWidth * 2 - 1, e.clientY / innerHeight * 2 - 1), { passive: true });
+}
+// darken the space behind reading sections (the galaxy stays vivid at the top)
+{ let raf = 0; const upd = () => { raf = 0; const v = Math.max(0, Math.min(1, (scrollY - innerHeight * 0.35) / (innerHeight * 0.6)));
+    document.documentElement.style.setProperty("--scrim", v.toFixed(3)); if (intro) intro.setDim(v); };
+  addEventListener("scroll", () => { if (!raf) raf = requestAnimationFrame(upd); }, { passive: true }); upd(); }
+// phone menu: opens under the navbar, closes on a link, outside tap or Escape
+{ const nav = document.querySelector(".navbar"), btn = document.getElementById("menu-btn");
+  const set = open => { nav.classList.toggle("open", open); btn.setAttribute("aria-expanded", String(open)); };
+  btn.addEventListener("click", e => { e.stopPropagation(); set(!nav.classList.contains("open")); });
+  nav.querySelectorAll(".links a").forEach(a => a.addEventListener("click", () => set(false)));
+  document.addEventListener("click", e => { if (!nav.contains(e.target)) set(false); });
+  document.addEventListener("keydown", e => { if (e.key === "Escape") set(false); });
+  addEventListener("scroll", () => { if (nav.classList.contains("open") && body.classList.contains("nav-hidden")) set(false); }, { passive: true });
+}
+// navbar: slides away while scrolling down, back as soon as you scroll up (or reach the top, or tab into it)
+{ let lastY = scrollY, raf = 0;
+  addEventListener("scroll", () => { if (raf) return; raf = requestAnimationFrame(() => { raf = 0; const y = scrollY, dy = y - lastY;
+    if (y < 120 || dy < -6) body.classList.remove("nav-hidden"); else if (dy > 6) body.classList.add("nav-hidden");
+    if (Math.abs(dy) > 6) lastY = y; }); }, { passive: true });
+  document.querySelector(".nav-shell").addEventListener("focusin", () => body.classList.remove("nav-hidden"));
+}
+// navbar: highlight the section being read
+{
+  const links = [...document.querySelectorAll(".links a")], byId = new Map(links.map(a => [a.getAttribute("href").slice(1), a]));
+  const seen = new Map();
+  const io = new IntersectionObserver(es => {
+    for (const e of es) seen.set(e.target.id, e.isIntersecting ? e.intersectionRatio : 0);
+    let best = null, top = 0; for (const [id, r] of seen) if (r > top) { top = r; best = id; }
+    links.forEach(a => a.removeAttribute("aria-current")); if (best && byId.get(best)) byId.get(best).setAttribute("aria-current", "true");
+  }, { rootMargin: "-30% 0px -55% 0px", threshold: [0, 0.01, 0.2, 0.5, 1] });
+  for (const id of byId.keys()) { const el = document.getElementById(id); if (el) io.observe(el); }
+}
+// the glass catches light where the pointer is
+addEventListener("pointermove", e => {
+  const el = e.target.closest && e.target.closest(".card, .site"); if (!el) return;
+  const r = el.getBoundingClientRect(); el.style.setProperty("--mx", (e.clientX - r.left) + "px"); el.style.setProperty("--my", (e.clientY - r.top) + "px");
+}, { passive: true });
+</script>
+</body>
+</html>

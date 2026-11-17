@@ -1,0 +1,16 @@
+{
+  "checked": "2026-11-14",
+  "note": "Number of granules in NASA's CMR catalogue that touch each zone. Re-run scripts/01_search.py for the live count.",
+  "zones": {
+    "avila":   {"gcov_provisional": 42, "gcov_validated": 3, "gunw": 38, "opera_dist_hls": 119, "opera_dist_s1": 40, "first": "2026-01-03", "tracks": ["087 A", "095 D", "023 D"]},
+    "gironde": {"gcov_provisional": 49, "gcov_validated": 3, "gunw": 44, "opera_dist_hls": 113, "first": "2025-11-04", "tracks": ["095 D", "058 A", "130 A"]},
+    "sefrou":  {"gcov_provisional": 85, "gcov_validated": 9, "gunw": 76, "opera_dist_hls": 108, "first": "2026-06-20", "tracks": ["095 D", "116 A", "167 D", "015 A"]}
+  },
+  "products": {
+    "gcov_provisional": "NISAR_L2_GCOV_PROVISIONAL_V1 – radar HH/HV calibré (bande L)",
+    "gcov_validated": "NISAR_L2_GCOV_V1 – version validée (acquisitions depuis le 21/10/2026)",
+    "gunw": "NISAR_L2_GUNW_PROVISIONAL_V1 – interférogrammes 12 jours (cohérence, déplacement)",
+    "opera_dist_hls": "OPERA_L3_DIST-ALERT-HLS_V1 – perturbation de la végétation (optique Landsat/Sentinel-2), depuis le 15/07/2026",
+    "opera_dist_s1": "OPERA_L3_DIST-ALERT-S1_V1 – perturbation vue par radar Sentinel-1"
+  }
+}

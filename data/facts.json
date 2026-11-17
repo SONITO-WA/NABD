@@ -1,0 +1,73 @@
+{
+  "avila": {
+    "facts_fr": [
+      "Départ le 22 juillet 2026 à Burgohondo (Ávila)",
+      "≈ 50 000 ha : le plus grand incendie jamais enregistré en Espagne",
+      "77 000 ha avec les feux de Madrid et de Tolède qu'il a rejoints",
+      "Périmètre de 160 à 180 km ; jusqu'à 90 000 personnes déplacées",
+      "Stabilisé le 6 août après 15 jours"
+    ],
+    "facts_en": [
+      "Started 22 July 2026 in Burgohondo (Ávila)",
+      "≈ 50,000 ha: the largest wildfire ever recorded in Spain",
+      "77,000 ha including the Madrid and Toledo fires it merged with",
+      "160-180 km perimeter; up to 90,000 people displaced",
+      "Stabilised on 6 August after 15 days"
+    ],
+    "sources": [
+      ["NASA Earth Observatory – Destructive fires char Western Europe", "https://science.nasa.gov/earth/earth-observatory/destructive-fires-char-western-europe/"],
+      ["Euronews (ES) – perímetro de Burgohondo, 30/07/2026", "https://es.euronews.com/my-europe/2026/07/30/el-perimetro-de-burgohondo-incendio-record-de-espana-a-las-puertas-de-ser-estabilizado"],
+      ["Infobae – estabilizado tras quince días, 06/08/2026", "https://www.infobae.com/espana/2026/08/06/estabilizado-el-incendio-de-burgohondo-avila-tras-quince-dias-activos-y-mas-de-50000-hectareas-afectadas/"],
+      ["elDiario.es – perímetro de 180 km, 29/07/2026", "https://www.eldiario.es/castilla-y-leon/sociedad/incendio-avila-evoluciona-favorablemente-no-movido-centimetro-noche_1_13414024.html"]
+    ]
+  },
+  "gironde": {
+    "facts_fr": [
+      "Départ le 22 juillet 2026 à Saumos, dans la forêt de pins des Landes de Gascogne",
+      "42 000 ha : le plus vaste feu de forêt observé en France depuis des décennies",
+      "Le village du Porge en partie détruit ; des centaines de milliers d'évacués",
+      "Premier pyrocumulonimbus jamais signalé en France (25 juillet)",
+      "Feu « contenu, n'évolue plus » le 2 août"
+    ],
+    "facts_en": [
+      "Started 22 July 2026 in Saumos, in the Landes de Gascogne pine forest",
+      "42,000 ha: France's largest wildfire in decades",
+      "Le Porge village partly destroyed; hundreds of thousands evacuated",
+      "First pyrocumulonimbus ever reported in France (25 July)",
+      "Fire 'contained, no longer spreading' on 2 August"
+    ],
+    "sources": [
+      ["NASA Earth Observatory – Destructive fires char Western Europe", "https://science.nasa.gov/earth/earth-observatory/destructive-fires-char-western-europe/"],
+      ["notre-planete.info – 42 000 hectares en quelques jours", "https://www.notre-planete.info/actualites/506-extinctions_massives_volcans"],
+      ["Reporterre – La Gironde face aux incendies", "https://reporterre.net/La-Gironde-face-aux-incendies-ceux-qui-restent-ceux-qui-fuient-ceux-qui-ont-tout-perdu"],
+      ["AFP / Boursorama – situation stable, 02/08/2026", "https://www.boursorama.com/actualite-economique/actualites-amp/incendie-en-gironde-situation-stable-dimanche-le-feu-n-evolue-plus-selon-la-prefecture-71877441f6af61a1ecc37f332668d433"]
+    ]
+  },
+  "sefrou": {
+    "facts_fr": [
+      "Départ le 31 juillet 2026 dans la forêt de Laânoussar (province de Sefrou), près de Dayet Ifrah",
+      "Moyen Atlas : cèdres et chênes, à 1 600 m d'altitude",
+      "480 ha de couvert forestier brûlés : le plus grand feu marocain de l'été 2026",
+      "Maîtrisé le 6-7 août par près de 300 intervenants"
+    ],
+    "facts_en": [
+      "Started 31 July 2026 in the Laânoussar forest (Sefrou province), near Dayet Ifrah",
+      "Middle Atlas: cedar and oak at 1,600 m altitude",
+      "480 ha of forest burned: Morocco's largest fire of summer 2026",
+      "Controlled on 6-7 August by about 300 responders"
+    ],
+    "sources": [
+      ["Hespress FR – centaines d'hectares ravagés à Sefrou et Chefchaouen, 11/08/2026", "https://fr.hespress.com/484899-incendies-des-centaines-dhectares-de-foret-ravages-a-sefrou-et-chefchaouen.html"],
+      ["Hespress FR – 100 hectares partis en fumée, 04/08/2026", "https://fr.hespress.com/484028-incendies-de-foret-100-hectares-partis-en-fumee-dans-deux-provinces-du-royaume.html"]
+    ]
+  },
+  "context": {
+    "fr": "Été 2026 : plus de 173 000 ha brûlés en Espagne (six fois 2025), plus de 116 000 ha en France (record depuis 2022). Au Maroc, 2 150 ha fin juillet, 31 % sous la moyenne : des feux plus nombreux mais plus petits.",
+    "en": "Summer 2026: over 173,000 ha burned in Spain (six times 2025), over 116,000 ha in France (a record since 2022). In Morocco, 2,150 ha by late July, 31% below average: more fires, but smaller ones.",
+    "sources": [
+      ["SNRT News – Espagne : plus de 173 000 ha", "https://snrtnews.com/fr/article/incendies-en-espagne-plus-de-173000-hectares-brules-en-2026-six-fois-plus-quen-2025-156070"],
+      ["L'Avenir – France : plus de 116 000 ha", "https://www.lavenir.net/actu/monde/2026/07/27/megafeu-en-gironde-reprises-contenues-macron-appelle-a-rester-unis-pour-gagner-cette-longue-bataille-RKV42AFFOVAI7P3B7MLT7AW6TA/"],
+      ["Aujourd'hui le Maroc – bilan ANEF", "https://aujourdhui.ma/?p=525726"]
+    ]
+  }
+}

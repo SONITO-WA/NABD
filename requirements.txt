@@ -1,0 +1,9 @@
+numpy
+scipy
+scikit-image
+rasterio
+pyproj
+pillow
+h5py
+earthaccess
+harmony-py
