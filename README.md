@@ -6,9 +6,9 @@
 
 **🌍 Live website: [nabd.earth](https://nabd.earth)** &nbsp;·&nbsp; mirror: [nabd-neon-six.vercel.app](https://nabd-neon-six.vercel.app)
 
-[![Watch the 90-second demo](docs/hero.jpg)](docs/nabd-demo.mp4)
+[![Watch the demo video](docs/hero.jpg)](docs/nabd-demo.mp4)
 
-▶️ **[Watch the 90‑second demo video](docs/nabd-demo.mp4)**
+▶️ **[Watch the demo video (75 seconds, with voice-over)](docs/nabd-demo.mp4)**
 
 ---
 
